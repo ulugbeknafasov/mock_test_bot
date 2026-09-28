@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Test yaratish</title>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            padding: 20px;
+
+            padding-bottom: 90px;
+
+            font-family: Arial, sans-serif;
+
+            background: #f5f7fb;
+
+            color: #222;
+        }
+
+
+        .container {
+
+            max-width: 500px;
+
+            margin: auto;
+        }
+
+
+        .welcome {
+
+            margin: 10px 5px 25px;
+        }
+
+
+        .welcome h1 {
+
+            margin: 0 0 8px;
+
+            font-size: 24px;
+        }
+
+
+        .welcome p {
+
+            margin: 0;
+
+            color: #777;
+        }
+
+
+        .card {
+
+            background: white;
+
+            padding: 20px;
+
+            border-radius: 18px;
+
+            box-shadow:
+                0 3px 15px
+                rgba(0, 0, 0, 0.07);
+        }
+
+
+        .card h2 {
+
+            margin: 0 0 20px;
+
+            font-size: 20px;
+        }
+
+
+        .field {
+
+            margin-bottom: 17px;
+        }
+
+
+        .field label {
+
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-size: 14px;
+
+            font-weight: bold;
+        }
+
+
+        .field input,
+        .field select {
+
+            width: 100%;
+
+            height: 50px;
+
+            padding: 0 14px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 12px;
+
+            outline: none;
+
+            font-size: 16px;
+
+            background: white;
+        }
+
+
+        .field input:focus,
+        .field select:focus {
+
+            border-color: #2481cc;
+        }
+
+
+        .create-button {
+
+            width: 100%;
+
+            height: 55px;
+
+            border: 0;
+
+            border-radius: 14px;
+
+            background: #2481cc;
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .create-button:disabled {
+
+            opacity: 0.6;
+
+            cursor: not-allowed;
+        }
+
+
+        /* =========================
+           BOTTOM NAV
+        ========================= */
+
+        .bottom-nav {
+
+            position: fixed;
+
+            left: 0;
+
+            right: 0;
+
+            bottom: 0;
+
+            height: 70px;
+
+            background: white;
+
+            border-top: 1px solid #e5e5e5;
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 60px;
+
+            align-items: center;
+
+            z-index: 20;
+        }
+
+
+        .nav-button {
+
+            border: 0;
+
+            background: none;
+
+            font-size: 14px;
+
+            color: #555;
+
+            cursor: pointer;
+        }
+
+
+        .nav-icon {
+
+            display: block;
+
+            font-size: 22px;
+
+            margin-bottom: 3px;
+        }
+
+
+        .active {
+
+            color: #2481cc;
+
+            font-weight: bold;
+        }
+
+
+        /* =========================
+           MODAL
+        ========================= */
+
+        .modal {
+
+            display: none;
+
+            position: fixed;
+
+            inset: 0;
+
+            background:
+                rgba(0, 0, 0, 0.55);
+
+            z-index: 100;
+
+            padding: 20px;
+
+            align-items: flex-end;
+
+            justify-content: center;
+        }
+
+
+        .modal.show {
+
+            display: flex;
+        }
+
+
+        .modal-box {
+
+            width: 100%;
+
+            max-width: 500px;
+
+            background: white;
+
+            border-radius: 24px;
+
+            padding: 24px;
+
+            max-height: 90vh;
+
+            overflow-y: auto;
+
+            animation:
+                modalOpen 0.2s ease;
+        }
+
+
+        @keyframes modalOpen {
+
+            from {
+
+                transform:
+                    translateY(30px);
+
+                opacity: 0;
+            }
+
+            to {
+
+                transform:
+                    translateY(0);
+
+                opacity: 1;
+            }
+        }
+
+
+        .modal-header {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            margin-bottom: 20px;
+        }
+
+
+        .modal-header h2 {
+
+            margin: 0;
+
+            font-size: 23px;
+        }
+
+
+        .close-button {
+
+            width: 38px;
+
+            height: 38px;
+
+            border: 0;
+
+            border-radius: 50%;
+
+            background: #f1f1f1;
+
+            font-size: 22px;
+
+            cursor: pointer;
+        }
+
+
+        /* =========================
+           PROFILE
+        ========================= */
+
+        .profile-top {
+
+            text-align: center;
+
+            margin-bottom: 22px;
+        }
+
+
+        .profile-avatar {
+
+            width: 80px;
+
+            height: 80px;
+
+            margin: auto;
+
+            border-radius: 50%;
+
+            background: #2481cc;
+
+            color: white;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 35px;
+
+            font-weight: bold;
+        }
+
+
+        .profile-name {
+
+            margin-top: 12px;
+
+            font-size: 20px;
+
+            font-weight: bold;
+        }
+
+
+        .profile-username {
+
+            margin-top: 5px;
+
+            color: #777;
+
+            font-size: 14px;
+        }
+
+
+        .info-card {
+
+            background: #f6f8fb;
+
+            border-radius: 16px;
+
+            padding: 16px;
+
+            margin-bottom: 12px;
+        }
+
+
+        .info-title {
+
+            color: #777;
+
+            font-size: 13px;
+
+            margin-bottom: 6px;
+        }
+
+
+        .info-value {
+
+            font-size: 17px;
+
+            font-weight: bold;
+        }
+
+
+        .pro-card {
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #6c63ff,
+                    #a855f7
+                );
+
+            color: white;
+
+            border-radius: 18px;
+
+            padding: 20px;
+
+            margin-top: 15px;
+
+            margin-bottom: 15px;
+        }
+
+
+        .pro-title {
+
+            font-size: 21px;
+
+            font-weight: bold;
+
+            margin-bottom: 8px;
+        }
+
+
+        .pro-status {
+
+            font-size: 16px;
+
+            margin-bottom: 8px;
+        }
+
+
+        .pro-time {
+
+            font-size: 18px;
+
+            font-weight: bold;
+
+            margin-top: 12px;
+        }
+
+
+        .pro-button {
+
+            width: 100%;
+
+            height: 52px;
+
+            border: 0;
+
+            border-radius: 14px;
+
+            background: white;
+
+            color: #6c4de8;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        /* =========================
+           PRO PURCHASE
+        ========================= */
+
+        .pro-intro {
+
+            text-align: center;
+
+            color: #666;
+
+            margin-bottom: 20px;
+        }
+
+
+        .tariff {
+
+            border: 1px solid #ddd;
+
+            border-radius: 17px;
+
+            padding: 17px;
+
+            margin-bottom: 12px;
+
+            background: #fff;
+        }
+
+
+        .tariff-title {
+
+            font-size: 18px;
+
+            font-weight: bold;
+
+            margin-bottom: 5px;
+        }
+
+
+        .tariff-price {
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+            margin: 8px 0 12px;
+
+            color: #2481cc;
+        }
+
+
+        .tariff-button {
+
+            width: 100%;
+
+            height: 46px;
+
+            border: 0;
+
+            border-radius: 12px;
+
+            background: #2481cc;
+
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .cancel-button {
+
+            width: 100%;
+
+            height: 48px;
+
+            border: 0;
+
+            border-radius: 12px;
+
+            background: #f0f0f0;
+
+            color: #444;
+
+            font-size: 15px;
+
+            cursor: pointer;
+
+            margin-top: 5px;
+        }
+
+
+        /* =========================
+           MESSAGE MODAL
+        ========================= */
+
+        .message-text {
+
+            text-align: center;
+
+            line-height: 1.5;
+
+            white-space: pre-line;
+
+            margin: 15px 0 20px;
+        }
+
+
+        /* =========================
+           DTM JAVOBLAR KALITI
+        ========================= */
+        .payment-card-box {
+            background:#f6f8fb;
+            border-radius:14px;
+            padding:16px;
+            margin:12px 0 16px;
+            line-height:1.7;
+        }
+        .payment-card-number {
+            font-size:20px;
+            font-weight:800;
+            letter-spacing:1px;
+            word-break:break-word;
+        }
+
+        .answer-key-info {
+            background: #f5f6f8;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .answer-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            max-height: 58vh;
+            overflow-y: auto;
+            padding: 2px 2px 8px;
+        }
+
+        .answer-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            width: 100%;
+            min-height: 44px;
+            padding: 7px 0;
+            border-bottom: 1px solid #eee;
+            box-sizing: border-box;
+        }
+
+        .answer-row.dual-answer-row {
+            align-items: flex-start;
+            min-height: 0;
+            padding: 8px 0 10px;
+        }
+
+        .answer-number {
+            flex: 0 0 34px;
+            width: 34px;
+            font-weight: 700;
+            color: #333;
+            font-size: 15px;
+            line-height: 40px;
+            box-sizing: border-box;
+        }
+
+        .dual-answer-row .answer-number {
+            line-height: 42px;
+        }
+
+        .answer-options {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .answer-option {
+            width: 34px;
+            height: 34px;
+            border: 2px solid #bfc3c9;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            color: #555;
+            padding: 0;
+            transition: .15s ease;
+            position: relative;
+        }
+
+        .answer-option.selected {
+            border-color: #2481cc;
+            background: #2481cc;
+            color: #fff;
+        }
+
+        .answer-option:active {
+            transform: scale(.94);
+        }
+
+        .answer-labels {
+            display: grid;
+            grid-template-columns: 34px 1fr;
+            margin-bottom: 3px;
+        }
+
+        .answer-label-options {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 0 2px;
+        }
+
+        .answer-label-options span {
+            width: 34px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #777;
+        }
+
+
+        .dual-answer-wrap {
+            flex: 1 1 auto;
+            width: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            min-width: 0;
+            padding: 5px 0;
+            box-sizing: border-box;
+        }
+
+        .dual-answer-part {
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr);
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .dual-answer-label {
+            display: block;
+            font-weight: 700;
+            font-size: 14px;
+            color: #333;
+            text-align: left;
+        }
+
+        .dual-answer-part .exact-answer {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .exact-answer {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #ddd;
+            border-radius: 11px;
+            padding: 0 12px;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .exact-answer:focus {
+            border-color: #2481cc;
+        }
+
+        @media (max-width: 420px) {
+            .answer-row { gap: 8px; }
+            .answer-number { flex-basis: 30px; width: 30px; }
+            .dual-answer-part { grid-template-columns: 25px minmax(0, 1fr); }
+            .dual-answer-part .exact-answer { height: 42px; font-size: 14px; }
+        }
+
+        .answer-save-button {
+            width: 100%;
+            height: 48px;
+            border: 0;
+            border-radius: 13px;
+            background: #2481cc;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .answer-back-button {
+            width: 100%;
+            height: 44px;
+            border: 0;
+            border-radius: 13px;
+            background: #f0f1f3;
+            color: #333;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+    
+/* Nusxa olish / matn belgilashni cheklash */
+html, body, .modal, .modal-box, .card, button, input, textarea {
+    -webkit-user-select: none;
+    user-select: none;
+}
+input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+}
+img {
+    -webkit-user-drag: none;
+}
+
+
+/* FINAL FIX: 36-45 dual answers - generous spacing, no overlap */
+.answer-row.dual-answer-row {
+    display:flex !important;
+    align-items:flex-start !important;
+    min-height:132px !important;
+    height:auto !important;
+    padding:14px 0 18px !important;
+    margin-bottom:8px !important;
+    box-sizing:border-box !important;
+}
+.answer-row.dual-answer-row .answer-number {
+    flex:0 0 38px !important;
+    width:38px !important;
+    line-height:1 !important;
+    padding-top:16px !important;
+}
+.dual-answer-wrap {
+    flex:1 1 auto !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:16px !important;
+    padding:0 !important;
+}
+.dual-answer-part {
+    display:grid !important;
+    grid-template-columns:32px minmax(0,1fr) !important;
+    align-items:center !important;
+    gap:9px !important;
+    min-height:48px !important;
+    width:100% !important;
+}
+.dual-answer-part .exact-answer {
+    height:48px !important;
+    min-height:48px !important;
+}
+.dual-answer-label {
+    line-height:1.2 !important;
+    white-space:nowrap !important;
+}
+@media (max-width:420px){
+    .answer-row.dual-answer-row { min-height:146px !important; padding:14px 0 20px !important; }
+    .answer-row.dual-answer-row .answer-number { flex-basis:34px !important; width:34px !important; padding-top:17px !important; }
+    .dual-answer-wrap { gap:18px !important; }
+    .dual-answer-part { grid-template-columns:28px minmax(0,1fr) !important; gap:8px !important; min-height:50px !important; }
+    .dual-answer-part .exact-answer { height:50px !important; min-height:50px !important; }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- =========================
+         HOME
+    ========================= -->
+
+    <div class="welcome">
+
+        <h1 id="welcomeText">
+            👋 Assalomu alaykum!
+        </h1>
+
+        <p>
+            Yangi test yaratish
+        </p>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>
+            ➕ Test yaratish
+        </h2>
+
+
+        <div class="field">
+
+            <label>
+                🔑 Test kodi
+            </label>
+
+            <input
+                id="testCode"
+                type="text"
+                maxlength="10"
+                placeholder="Masalan: ABC123"
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                📢 Test e’lon qilinadigan kanal
+            </label>
+
+            <input
+                id="channel"
+                type="text"
+                placeholder="@kanal_nomi"
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                ⏱️ Test davomiyligi
+            </label>
+
+            <select id="duration">
+
+                <option value="">
+                    Tanlang
+                </option>
+
+                <option value="15">
+                    15 daqiqa
+                </option>
+
+                <option value="30">
+                    30 daqiqa
+                </option>
+
+                <option value="45">
+                    45 daqiqa
+                </option>
+
+                <option value="60">
+                    60 daqiqa
+                </option>
+
+                <option value="90">
+                    90 daqiqa
+                </option>
+
+                <option value="120">
+                    120 daqiqa
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="field">
+
+            <label>
+                📝 Savollar soni
+            </label>
+
+            <select id="questionCount">
+
+                <option value="">
+                    Tanlang
+                </option>
+
+                <option value="10">
+                    10 ta
+                </option>
+
+                <option value="20">
+                    20 ta
+                </option>
+
+                <option value="30">
+                    30 ta
+                </option>
+
+                <option value="35">
+                    35 ta
+                </option>
+
+                <option value="40">
+                    40 ta
+                </option>
+
+                <option value="45">
+                    45 ta
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="continueButton"
+            class="create-button"
+            onclick="continueCreate()"
+        >
+
+            Davom etish ➜
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     BOTTOM NAV
+========================= -->
+
+<div class="bottom-nav">
+
+    <button
+        id="homeButton"
+        class="nav-button active"
+        onclick="goHome()"
+    >
+
+        <span class="nav-icon">
+            🏠
+        </span>
+
+        Bosh sahifa
+
+    </button>
+
+
+    <button
+        id="profileButton"
+        class="nav-button"
+        onclick="goProfile()"
+    >
+
+        <span class="nav-icon">
+            👤
+        </span>
+
+        Profil
+
+    </button>
+
+</div>
+
+
+<!-- =========================
+     PROFILE MODAL
+========================= -->
+
+<div
+    id="profileModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                👤 Profil
+            </h2>
+
+            <button
+                class="close-button"
+                onclick="closeProfile()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <div class="profile-top">
+
+            <div
+                id="profileAvatar"
+                class="profile-avatar"
+            >
+                U
+            </div>
+
+
+            <div
+                id="profileName"
+                class="profile-name"
+            >
+                Yuklanmoqda...
+            </div>
+
+
+            <div
+                id="profileUsername"
+                class="profile-username"
+            >
+                @username
+            </div>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-title">
+                Telegram ID
+            </div>
+
+            <div
+                id="profileTelegramId"
+                class="info-value"
+            >
+                —
+            </div>
+
+        </div>
+
+
+        <div class="pro-card">
+
+            <div class="pro-title">
+                ⭐ PRO
+            </div>
+
+
+            <div
+                id="profileProStatus"
+                class="pro-status"
+            >
+                Tekshirilmoqda...
+            </div>
+
+
+            <div
+                id="profileProTime"
+                class="pro-time"
+            >
+                —
+            </div>
+
+        </div>
+
+
+        <button
+            class="pro-button"
+            onclick="openProModal()"
+        >
+
+            ⭐ PRO sotib olish
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     PRO MODAL
+========================= -->
+
+<div
+    id="proModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                ⭐ PRO
+            </h2>
+
+            <button
+                class="close-button"
+                onclick="closeProModal()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <div class="pro-intro">
+
+            Test yaratish va PRO imkoniyatlaridan foydalaning.
+
+        </div>
+
+
+        <!--
+            Hozirgi serverda narx va muddat
+            admin tomonidan boshqariladi.
+
+            Keyingi bosqichda 1/3/6/12 oylik
+            tariflarni alohida serverdan oladigan qilamiz.
+        -->
+
+
+        <div id="proPlans" class="pro-plans">
+            <div class="tariff">Tariflar yuklanmoqda...</div>
+        </div>
+
+
+        <button
+            class="cancel-button"
+            onclick="closeProModal()"
+        >
+
+            Keyinroq
+
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<!-- =========================
+     DTM JAVOBLAR KALITI
+========================= -->
+<!-- =========================
+     PRO TO‘LOV
+ ========================= -->
+<div id="paymentModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>💳 To‘lov</h2>
+            <button class="close-button" onclick="closePaymentModal()">✕</button>
+        </div>
+        <div id="paymentInfo" class="message-text"></div>
+        <button id="paidButton" class="create-button" onclick="paidProPayment()">
+            ✅ To‘lov qildim
+        </button>
+        <button class="cancel-button" onclick="closePaymentModal()">Keyinroq</button>
+    </div>
+</div>
+
+<div id="answerKeyModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>📝 Javoblar kaliti</h2>
+            <button class="close-button" onclick="closeAnswerKey()">✕</button>
+        </div>
+
+        <div class="answer-key-info">
+            Savol matnlari bu yerga kiritilmaydi. Savollar Telegram kanalida bo‘ladi.
+            Bu oynada faqat to‘g‘ri javoblar belgilanadi.
+        </div>
+
+        <div id="answerGrid" class="answer-grid"></div>
+
+        <button class="answer-save-button" onclick="saveAnswerKey()">
+            ✅ Javoblar kalitini saqlash
+        </button>
+
+        <button class="answer-back-button" onclick="closeAnswerKey()">
+            ← Orqaga
+        </button>
+    </div>
+</div>
+
+<!-- =========================
+     MESSAGE MODAL
+========================= -->
+
+<div
+    id="messageModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                📋 Xabar
+            </h2>
+
+            <button
+                class="close-button"
+                onclick="closeMessage()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <div
+            id="messageText"
+            class="message-text"
+        >
+        </div>
+
+
+        <button
+            class="create-button"
+            onclick="closeMessage()"
+        >
+
+            Tushunarli
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* Nusxa olish / matn belgilashni cheklash */
+document.addEventListener("contextmenu", function (event) {
+    if (!event.target.matches("input, textarea")) event.preventDefault();
+});
+document.addEventListener("copy", function (event) {
+    if (!event.target.matches("input, textarea")) event.preventDefault();
+});
+document.addEventListener("cut", function (event) {
+    if (!event.target.matches("input, textarea")) event.preventDefault();
+});
+document.addEventListener("dragstart", function (event) {
+    event.preventDefault();
+});
+document.addEventListener("selectstart", function (event) {
+    if (!event.target.matches("input, textarea")) event.preventDefault();
+});
+document.addEventListener("DOMContentLoaded", function () {
+    const codeInput = document.getElementById("testCode");
+    if (codeInput) {
+        codeInput.addEventListener("input", function () {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        });
+    }
+});
+
+/* =====================================
+   TELEGRAM
+===================================== */
+
+const tg =
+    window.Telegram.WebApp;
+
+
+tg.ready();
+
+tg.expand();
+
+
+/* =====================================
+   SERVER MANZILI
+===================================== */
+
+const API_BASE = "https://view-paths-corresponding-temperature.trycloudflare.com";
+
+
+/* =====================================
+   USER / YAGONA FULL_NAME
+===================================== */
+
+const user =
+    tg.initDataUnsafe?.user;
+
+async function loadSharedProfile() {
+    if (!user) return;
+
+    // Telegram ID, username va vaqtinchalik avatar.
+    document.getElementById("profileTelegramId").textContent = user.id;
+    document.getElementById("profileUsername").textContent =
+        user.username
+            ? "@" + user.username
+            : "Username mavjud emas";
+
+    const telegramFallback =
+        [user.first_name || "", user.last_name || ""].join(" ").trim();
+
+    // Serverdagi yagona full_name ni olamiz.
+    try {
+        const response = await fetch(
+            API_BASE + "/api/participant/profile",
+            {
+                method: "GET",
+                headers: {
+                    "X-Telegram-Init-Data": tg.initData
+                },
+                cache: "no-store"
+            }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Server bu endpointdan full_name ni to'g'ridan-to'g'ri qaytaradi.
+            // Eski format {profile:{full_name:...}} bo'lsa ham ishlasin.
+            const profile = data.profile || data;
+            const fullName =
+                String(profile.full_name || data.full_name || "").trim() ||
+                "Ism-familiya kiritilmagan";
+
+            document.getElementById("welcomeText").textContent =
+                "👋 Assalomu alaykum, " + fullName + "!";
+
+            document.getElementById("profileName").textContent =
+                fullName;
+
+            document.getElementById("profileAvatar").textContent =
+                fullName.charAt(0).toUpperCase();
+
+            return;
+        }
+    } catch (error) {
+        console.error("Profil yuklash xatosi:", error);
+    }
+
+    // Server vaqtincha javob bermasa, faqat fallback ko'rsatamiz.
+    const fullName =
+        "Ism-familiya kiritilmagan";
+
+    document.getElementById("welcomeText").textContent =
+        "👋 Assalomu alaykum, " + fullName + "!";
+
+    document.getElementById("profileName").textContent =
+        fullName;
+
+    document.getElementById("profileAvatar").textContent =
+        fullName.charAt(0).toUpperCase();
+}
+
+loadSharedProfile();
+
+/* =====================================
+   PRO STATUS
+===================================== */
+
+let currentProData =
+    null;
+
+
+async function checkProStatus() {
+
+    try {
+
+        const response =
+            await fetch(
+                API_BASE +
+                "/api/pro-status",
+                {
+                    method: "GET",
+
+                    headers: {
+                        "X-Telegram-Init-Data":
+                            tg.initData
+                    }
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        currentProData =
+            data;
+
+
+        return data;
+
+    } catch (error) {
+
+        console.error(
+            "PRO server xatosi:",
+            error
+        );
+
+
+        return {
+
+            success: false,
+
+            message:
+                "Server bilan bog‘lanib bo‘lmadi."
+        };
+    }
+}
+
+
+/* =====================================
+   PROFILE
+===================================== */
+
+async function goProfile() {
+
+    document.getElementById(
+        "profileButton"
+    ).classList.add("active");
+
+
+    document.getElementById(
+        "homeButton"
+    ).classList.remove("active");
+
+
+    document.getElementById(
+        "profileModal"
+    ).classList.add("show");
+
+
+    await updateProfile();
+}
+
+
+async function updateProfile() {
+
+    const statusElement =
+        document.getElementById(
+            "profileProStatus"
+        );
+
+
+    const timeElement =
+        document.getElementById(
+            "profileProTime"
+        );
+
+
+    statusElement.textContent =
+        "Tekshirilmoqda...";
+
+
+    timeElement.textContent =
+        "—";
+
+
+    const data =
+        await checkProStatus();
+
+
+    if (!data.success) {
+
+        statusElement.textContent =
+            "❌ Aniqlanmadi";
+
+
+        timeElement.textContent =
+            data.message || "Server xatosi";
+
+        return;
+    }
+
+
+    /* ADMIN */
+
+    if (data.admin) {
+
+        statusElement.textContent =
+            "👑 Admin PRO";
+
+
+        timeElement.textContent =
+            "Cheksiz";
+
+        return;
+    }
+
+
+    /* PRO */
+
+    if (data.pro) {
+
+        statusElement.textContent =
+            "✅ PRO faol";
+
+
+        if (data.pro_until) {
+
+            updateRemainingTime(
+                data.pro_until
+            );
+
+            return;
+        }
+    }
+
+
+    /* PRO YO‘Q */
+
+    statusElement.textContent =
+        "❌ PRO mavjud emas";
+
+
+    timeElement.textContent =
+        "PRO sotib oling";
+}
+
+
+function updateRemainingTime(
+    proUntil
+) {
+
+    const timeElement =
+        document.getElementById(
+            "profileProTime"
+        );
+
+
+    const end =
+        new Date(proUntil);
+
+
+    function update() {
+
+        const now =
+            new Date();
+
+
+        let difference =
+            end.getTime() -
+            now.getTime();
+
+
+        if (difference <= 0) {
+
+            timeElement.textContent =
+                "PRO muddati tugagan";
+
+
+            document.getElementById(
+                "profileProStatus"
+            ).textContent =
+                "❌ PRO mavjud emas";
+
+
+            return;
+        }
+
+
+        const totalSeconds =
+            Math.floor(
+                difference / 1000
+            );
+
+
+        const days =
+            Math.floor(
+                totalSeconds /
+                86400
+            );
+
+
+        const hours =
+            Math.floor(
+                (
+                    totalSeconds %
+                    86400
+                ) / 3600
+            );
+
+
+        const minutes =
+            Math.floor(
+                (
+                    totalSeconds %
+                    3600
+                ) / 60
+            );
+
+
+        timeElement.textContent =
+            "⏳ " +
+            days +
+            " kun " +
+            hours +
+            " soat " +
+            minutes +
+            " daqiqa qoldi";
+    }
+
+
+    update();
+
+
+    /*
+        Har daqiqada yangilanadi.
+    */
+
+    clearInterval(
+        window.proTimer
+    );
+
+
+    window.proTimer =
+        setInterval(
+            update,
+            60000
+        );
+}
+
+
+function closeProfile() {
+
+    document.getElementById(
+        "profileModal"
+    ).classList.remove("show");
+
+
+    document.getElementById(
+        "profileButton"
+    ).classList.remove("active");
+
+
+    document.getElementById(
+        "homeButton"
+    ).classList.add("active");
+}
+
+
+/* =====================================
+   PRO MODAL
+===================================== */
+
+async function openProModal() {
+    document.getElementById("proModal").classList.add("show");
+    const plansBox = document.getElementById("proPlans");
+    plansBox.innerHTML = '<div class="tariff">Tariflar yuklanmoqda...</div>';
+
+    const status = await checkProStatus();
+    if (!status.success) {
+        plansBox.innerHTML = '<div class="tariff">❌ ' + (status.message || "Server bilan bog‘lanib bo‘lmadi.") + '</div>';
+        return;
+    }
+    if (status.admin) {
+        plansBox.innerHTML = '<div class="tariff"><div class="tariff-title">👑 Admin</div><div class="tariff-price">Cheksiz PRO</div></div>';
+        return;
+    }
+    if (status.pro) {
+        plansBox.innerHTML = '<div class="tariff"><div class="tariff-title">✅ PRO faol</div><div class="tariff-price">Sizda PRO mavjud</div></div>';
+        return;
+    }
+
+    try {
+        const response = await fetch(API_BASE + "/api/pro-plans", {
+            headers: { "X-Telegram-Init-Data": tg.initData }
+        });
+        const data = await response.json();
+        if (!data.success || !data.plans || !data.plans.length) {
+            plansBox.innerHTML = '<div class="tariff">❌ Faol tarif topilmadi.</div>';
+            return;
+        }
+        plansBox.innerHTML = "";
+        data.plans.forEach(function(plan) {
+            const card = document.createElement("div");
+            card.className = "tariff";
+            card.innerHTML =
+                '<div class="tariff-title">⭐ PRO ' + plan.duration_days + ' kun</div>' +
+                '<div class="tariff-price">' + Number(plan.price).toLocaleString("uz-UZ") + ' so‘m</div>' +
+                '<button class="tariff-button">⭐ Sotib olish</button>';
+            card.querySelector("button").addEventListener("click", function() {
+                buyPro(plan.id, plan.duration_days, plan.price);
+            });
+            plansBox.appendChild(card);
+        });
+    } catch (error) {
+        console.error("PRO plans error:", error);
+        plansBox.innerHTML = '<div class="tariff">❌ Server bilan bog‘lanib bo‘lmadi.</div>';
+    }
+}
+
+function closeProModal() {
+    document.getElementById("proModal").classList.remove("show");
+}
+
+async function buyPro(planId, durationDays, amount) {
+    try {
+        const response = await fetch(API_BASE + "/api/pro-purchase", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Telegram-Init-Data": tg.initData
+            },
+            body: JSON.stringify({ plan_id: planId })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            showMessage("❌ Xatolik\n\n" + (data.message || "To‘lov yaratilmadi."));
+            return;
+        }
+
+        closeProModal();
+        const card = data.card || {};
+        const cardNumber = card.card_number || "Karta ma’lumoti hali kiritilmagan";
+        const holder = card.card_holder ? "\n👤 Karta egasi: " + card.card_holder : "";
+        const bank = card.bank_name ? "\n🏦 Bank: " + card.bank_name : "";
+        document.getElementById("paymentInfo").innerHTML =
+            '<div>💰 <b>Summa:</b> ' + Number(data.amount).toLocaleString("uz-UZ") + ' so‘m</div>' +
+            '<div>⭐ <b>Muddat:</b> ' + data.duration_days + ' kun</div>' +
+            '<div class="payment-card-box">' +
+            '<div>💳 <b>Karta raqami:</b></div>' +
+            '<div class="payment-card-number">' + cardNumber + '</div>' +
+            '<div>' + holder.replace(/\n/g,"<br>") + bank.replace(/\n/g,"<br>") + '</div>' +
+            '</div>' +
+            '<div>1. Yuqoridagi kartaga to‘lov qiling.<br>2. Keyin <b>“To‘lov qildim”</b> tugmasini bosing.<br>3. Bot sizdan chekni yuborishingizni so‘raydi.</div>';
+        window.currentPaymentId = data.payment_id;
+        document.getElementById("paymentModal").classList.add("show");
+    } catch (error) {
+        console.error("PRO purchase error:", error);
+        showMessage("❌ Server bilan bog‘lanib bo‘lmadi.");
+    }
+}
+
+function closePaymentModal() {
+    document.getElementById("paymentModal").classList.remove("show");
+}
+
+async function paidProPayment() {
+    const button = document.getElementById("paidButton");
+    if (!window.currentPaymentId) return;
+    button.disabled = true;
+    button.textContent = "Yuborilmoqda...";
+    try {
+        const response = await fetch(API_BASE + "/api/pro-payment-paid", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Telegram-Init-Data": tg.initData
+            },
+            body: JSON.stringify({ payment_id: window.currentPaymentId })
+        });
+        const data = await response.json();
+        if (!data.success) {
+            showMessage("❌ " + (data.message || "So‘rov yuborilmadi."));
+            button.disabled = false;
+            button.textContent = "✅ To‘lov qildim";
+            return;
+        }
+        closePaymentModal();
+        tg.close();
+    } catch (error) {
+        console.error("Payment paid error:", error);
+        showMessage("❌ Server bilan bog‘lanib bo‘lmadi.");
+        button.disabled = false;
+        button.textContent = "✅ To‘lov qildim";
+    }
+}
+
+/* =====================================
+   TEST YARATISH
+===================================== */
+
+async function continueCreate() {
+    const testCode = document.getElementById("testCode").value.trim().toUpperCase();
+    const channel = document.getElementById("channel").value.trim();
+    const duration = document.getElementById("duration").value;
+    const questionCount = document.getElementById("questionCount").value;
+    const button = document.getElementById("continueButton");
+
+    if (!testCode) {
+        showMessage("❗ Test kodini kiriting.");
+        return;
+    }
+    if (testCode.length < 4 || testCode.length > 10) {
+        showMessage("❗ Test kodi 4–10 ta belgidan iborat bo‘lishi kerak.");
+        return;
+    }
+    if (!channel) {
+        showMessage("❗ Test e’lon qilinadigan kanalni kiriting.");
+        return;
+    }
+    if (!duration) {
+        showMessage("❗ Test davomiyligini tanlang.");
+        return;
+    }
+    if (!questionCount) {
+        showMessage("❗ Savollar sonini tanlang.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Tekshirilmoqda...";
+
+    try {
+        const proData = await checkProStatus();
+
+        if (!proData || !proData.success) {
+            showMessage("❌ " + (proData?.message || "Server bilan bog‘lanib bo‘lmadi."));
+            return;
+        }
+
+        if (!proData.pro && !proData.admin) {
+            openProModal();
+            return;
+        }
+
+        window.currentTestDraft = {
+            code: testCode,
+            channel: channel,
+            duration: Number(duration),
+            questionCount: Number(questionCount)
+        };
+
+        openAnswerKey();
+    } catch (error) {
+        console.error("Test yaratish xatosi:", error);
+        showMessage("❌ Test yaratishni boshlashda xatolik yuz berdi.");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Davom etish ➜";
+    }
+}
+
+/* =====================================
+   DTM JAVOBLAR KALITI
+===================================== */
+
+window.currentTestDraft = null;
+window.answerKey = {};
+window.currentPaymentId = null;
+
+function openAnswerKey() {
+    const draft = window.currentTestDraft;
+    if (!draft) return;
+
+    window.answerKey = {};
+
+    const grid = document.getElementById("answerGrid");
+
+    if (!grid) {
+        throw new Error("answerGrid elementi topilmadi.");
+    }
+
+    grid.innerHTML = "";
+
+    const count = Number(draft.questionCount);
+
+    for (let i = 1; i <= count; i++) {
+        const row = document.createElement("div");
+        row.className = "answer-row";
+
+        const number = document.createElement("div");
+        number.className = "answer-number";
+        number.textContent = i + ".";
+        row.appendChild(number);
+
+        if (i <= 35) {
+            const optionCount = i <= 32 ? 4 : 6;
+            const options = document.createElement("div");
+            options.className = "answer-options";
+
+            for (let j = 0; j < optionCount; j++) {
+                const letter = String.fromCharCode(65 + j);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "answer-option";
+                button.setAttribute("aria-label", i + "-savol " + letter);
+                button.textContent = letter;
+                button.dataset.question = i;
+                button.dataset.answer = letter;
+
+                button.addEventListener("click", function () {
+                    options.querySelectorAll(".answer-option").forEach(function (item) {
+                        item.classList.remove("selected");
+                    });
+                    button.classList.add("selected");
+                    window.answerKey[i] = letter;
+                });
+
+                options.appendChild(button);
+            }
+
+            row.appendChild(options);
+        } else if (i >= 36 && i <= 45) {
+            // Milliy sertifikat uslubidagi yopiq savol: bitta savolda 2 ta javob.
+            row.classList.add("dual-answer-row");
+            const wrap = document.createElement("div");
+            wrap.className = "dual-answer-wrap";
+
+            const partA = document.createElement("div");
+            partA.className = "dual-answer-part";
+            const labelA = document.createElement("span");
+            labelA.textContent = "a)";
+            labelA.className = "dual-answer-label";
+            const inputA = document.createElement("input");
+            inputA.type = "text";
+            inputA.className = "exact-answer";
+            inputA.placeholder = "Javob";
+            inputA.autocomplete = "off";
+
+            const partB = document.createElement("div");
+            partB.className = "dual-answer-part";
+            const labelB = document.createElement("span");
+            labelB.textContent = "b)";
+            labelB.className = "dual-answer-label";
+            const inputB = document.createElement("input");
+            inputB.type = "text";
+            inputB.className = "exact-answer";
+            inputB.placeholder = "Javob";
+            inputB.autocomplete = "off";
+
+            const saveParts = function () {
+                window.answerKey[i] = [inputA.value.trim(), inputB.value.trim()];
+            };
+            inputA.addEventListener("input", saveParts);
+            inputB.addEventListener("input", saveParts);
+
+            partA.appendChild(labelA);
+            partA.appendChild(inputA);
+            partB.appendChild(labelB);
+            partB.appendChild(inputB);
+            wrap.appendChild(partA);
+            wrap.appendChild(partB);
+            row.appendChild(wrap);
+        } else {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "exact-answer";
+            input.placeholder = "Aniq javob";
+            input.autocomplete = "off";
+            input.dataset.question = i;
+            input.addEventListener("input", function () {
+                window.answerKey[i] = input.value.trim();
+            });
+            row.appendChild(input);
+        }
+
+        grid.appendChild(row);
+    }
+
+    document.getElementById("answerKeyModal").classList.add("show");
+}
+
+function closeAnswerKey() {
+    document.getElementById("answerKeyModal").classList.remove("show");
+}
+
+async function saveAnswerKey() {
+    const draft = window.currentTestDraft;
+    if (!draft) return;
+
+    const missing = [];
+    for (let i = 1; i <= draft.questionCount; i++) {
+        if (i >= 36 && i <= 45) {
+            const pair = window.answerKey[i];
+            if (!Array.isArray(pair) || !String(pair[0] || "").trim() || !String(pair[1] || "").trim()) {
+                missing.push(i);
+            }
+        } else if (!String(window.answerKey[i] || "").trim()) {
+            missing.push(i);
+        }
+    }
+
+    if (missing.length) {
+        showMessage(
+            "❗ Quyidagi savollarning javobi belgilanmagan:\n" +
+            missing.slice(0, 15).join(", ") +
+            (missing.length > 15 ? " ..." : "")
+        );
+        return;
+    }
+
+    const button = document.querySelector(".answer-save-button");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Saqlanmoqda...";
+    }
+
+    try {
+        if (!tg.initData) {
+            throw new Error("Telegram ma'lumotlari topilmadi.");
+        }
+
+        const payload = {
+            code: draft.code,
+            channel: draft.channel,
+            duration: Number(draft.duration),
+            question_count: Number(draft.questionCount),
+            answer_key: window.answerKey
+        };
+
+        const response = await fetch(API_BASE + "/api/create-test", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Telegram-Init-Data": tg.initData
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Test yaratilmadi.");
+        }
+
+        closeAnswerKey();
+
+        showMessage(
+            "✅ Test muvaffaqiyatli yaratildi!\n\n" +
+            "🔑 Test kodi: " + data.code + "\n" +
+            "📢 Kanal: " + data.channel + "\n" +
+            "⏱ Davomiyligi: " + data.duration + " daqiqa\n" +
+            "📝 Savollar: " + data.question_count + " ta\n\n" +
+            "🤖 Bot sizga test holati haqida xabar yubordi."
+        );
+
+        window.currentTestDraft = null;
+        window.answerKey = {};
+
+    } catch (error) {
+        console.error("CREATE TEST ERROR:", error);
+        showMessage(
+            "❌ Test yaratishda xatolik:\n\n" +
+            error.message
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "✅ Javoblar kalitini saqlash";
+        }
+    }
+}
+
+
+/* =====================================
+   HOME
+===================================== */
+
+function goHome() {
+
+    document.getElementById(
+        "homeButton"
+    ).classList.add("active");
+
+
+    document.getElementById(
+        "profileButton"
+    ).classList.remove("active");
+
+
+    closeProfile();
+
+    closeProModal();
+
+
+    window.scrollTo(
+        {
+            top: 0,
+            behavior: "smooth"
+        }
+    );
+}
+
+
+/* =====================================
+   MESSAGE
+===================================== */
+
+function showMessage(text) {
+
+    document.getElementById(
+        "messageText"
+    ).textContent =
+        text;
+
+
+    document.getElementById(
+        "messageModal"
+    ).classList.add("show");
+}
+
+
+function closeMessage() {
+
+    document.getElementById(
+        "messageModal"
+    ).classList.remove("show");
+}
+
+
+/* =====================================
+   MODAL TASHQARISIGA BOSILSA YOPISH
+===================================== */
+
+document
+    .getElementById("answerKeyModal")
+    .addEventListener(
+        "click",
+        function(event) {
+            if (event.target === this) {
+                closeAnswerKey();
+            }
+        }
+    );
+
+
+document
+    .getElementById("profileModal")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === this
+            ) {
+
+                closeProfile();
+            }
+        }
+    );
+
+
+document
+    .getElementById("proModal")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === this
+            ) {
+
+                closeProModal();
+            }
+        }
+    );
+
+
+document
+    .getElementById("messageModal")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === this
+            ) {
+
+                closeMessage();
+            }
+        }
+    );
+
+</script>
+
+</body>
+
+</html>
