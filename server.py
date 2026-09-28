@@ -1309,7 +1309,20 @@ def pro_pending():
 
 if __name__ == "__main__":
     print("🌐 Server ishga tushdi...")
-    print("📡 Port: 5000")
+
+    port = int(os.environ.get("PORT", 5000))
+    print(f"📡 Port: {port}")
+
     print("🤖 Checker: har 2 soniyada testlarni tekshiradi")
-    threading.Thread(target=_checker_worker, daemon=True, name="mock-checker").start()
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    threading.Thread(
+        target=_checker_worker,
+        daemon=True,
+        name="mock-checker"
+    ).start()
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+        use_reloader=False
+    )
