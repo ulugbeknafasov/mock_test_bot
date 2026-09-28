@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 import sqlite3
 import os
+import sys
+import subprocess
+import threading
 import time
 import threading
 from io import BytesIO
@@ -1312,6 +1315,15 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
     print(f"📡 Port: {port}")
+
+    print("🤖 Telegram bot ishga tushirilmoqda...")
+
+    subprocess.Popen(
+        [sys.executable, "bot.py"],
+        env=os.environ.copy()
+    )
+
+    print("✅ Telegram bot ishga tushirish buyrug'i berildi...")
 
     print("🤖 Checker: har 2 soniyada testlarni tekshiradi")
     threading.Thread(
