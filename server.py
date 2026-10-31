@@ -1464,9 +1464,12 @@ if __name__ == "__main__":
 
     print("🤖 Telegram bot ishga tushirilmoqda...")
 
+    bot_env = os.environ.copy()
+    bot_env["RUN_WITH_FLASK"] = "1"
+
     subprocess.Popen(
         [sys.executable, "bot.py"],
-        env=os.environ.copy()
+        env=bot_env
     )
 
     print("✅ Telegram bot ishga tushirish buyrug'i berildi...")
