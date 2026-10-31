@@ -33,6 +33,9 @@ from database import (
     get_connection,
     get_full_name,
     set_full_name,
+    validate_full_name,
+    get_required_channels,
+    is_admin,
 )
 
 app = Flask(__name__)
@@ -78,6 +81,40 @@ def get_telegram_user_id():
     except Exception:
         return None
 
+def _missing_required_channels(telegram_id):
+    """Return required channels the user has not joined. Admin bypasses the gate."""
+    if int(telegram_id) == int(ADMIN_ID) or is_admin(telegram_id):
+        return []
+    missing = []
+    for channel in get_required_channels():
+        try:
+            payload = urlencode({"chat_id": channel["channel_id"], "user_id": str(telegram_id)}).encode()
+            req = Request(f"https://api.telegram.org/bot{BOT_TOKEN}/getChatMember", data=payload, method="POST")
+            with urlopen(req, timeout=10) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            member = result.get("result", {}) if result.get("ok") else {}
+            status = member.get("status")
+            joined = status in ("creator", "administrator", "member") or (status == "restricted" and member.get("is_member"))
+            if not joined:
+                missing.append({"title": channel["title"], "url": channel["invite_link"]})
+        except Exception as error:
+            print("Subscription check error:", error)
+            missing.append({"title": channel["title"], "url": channel["invite_link"]})
+    return missing
+
+
+def _subscription_block(telegram_id):
+    missing = _missing_required_channels(telegram_id)
+    if not missing:
+        return None
+    return jsonify({
+        "success": False,
+        "code": "SUBSCRIPTION_REQUIRED",
+        "message": "Botdan foydalanish uchun majburiy kanallarga obuna bo‘ling va qayta tekshiring.",
+        "required_channels": missing
+    }), 403
+
+
 def send_telegram_message(chat_id, text):
     """Send a normal text message from the bot to the user's Telegram chat."""
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -122,6 +159,7 @@ def init_test_tables():
             channel TEXT NOT NULL,
             duration_minutes INTEGER NOT NULL,
             question_count INTEGER NOT NULL,
+            subject TEXT NOT NULL DEFAULT 'matematika',
             answer_key_json TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ends_at TIMESTAMP NOT NULL,
@@ -139,12 +177,17 @@ def init_test_tables():
         )
     """)
 
+    cursor.execute("PRAGMA table_info(mock_tests)")
+    columns = {row["name"] for row in cursor.fetchall()}
+    if "subject" not in columns:
+        cursor.execute("ALTER TABLE mock_tests ADD COLUMN subject TEXT NOT NULL DEFAULT 'matematika'")
+
     connection.commit()
     connection.close()
 
 init_test_tables()
 
-def create_mock_test(creator_id, code, channel, duration, question_count, answer_key):
+def create_mock_test(creator_id, code, channel, duration, question_count, subject, answer_key):
     connection = get_connection()
     cursor = connection.cursor()
 
@@ -163,15 +206,16 @@ def create_mock_test(creator_id, code, channel, duration, question_count, answer
         cursor.execute("""
             INSERT INTO mock_tests (
                 creator_id, code, channel, duration_minutes,
-                question_count, answer_key_json, created_at, ends_at, status
+                question_count, subject, answer_key_json, created_at, ends_at, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         """, (
             creator_id,
             code,
             channel,
             duration,
             question_count,
+            subject,
             json.dumps(answer_key, ensure_ascii=False),
             created_at.isoformat(),
             ends_at.isoformat()
@@ -246,6 +290,12 @@ def pro_status():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     if telegram_id == ADMIN_ID:
         return jsonify({"success": True, "pro": True, "admin": True, "message": "Admin"})
     pro_user = get_pro_user(telegram_id)
@@ -266,6 +316,12 @@ def pro_plans():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     result = [{
         "id": p["id"],
         "duration_days": p["duration_days"],
@@ -279,6 +335,12 @@ def pro_purchase():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     if telegram_id == ADMIN_ID:
         return jsonify({"success": False, "message": "Admin uchun PRO kerak emas."}), 400
     try:
@@ -323,6 +385,12 @@ def pro_payment_paid():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     try:
         body = request.get_json(silent=True) or {}
         payment_id = int(body.get("payment_id"))
@@ -361,11 +429,16 @@ def create_test():
             "message": "Telegram foydalanuvchisi aniqlanmadi."
         }), 401
 
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
     try:
         body = request.get_json(silent=True) or {}
 
         code = str(body.get("code", "")).strip().upper()
         channel = str(body.get("channel", "")).strip()
+        subject = str(body.get("subject", "")).strip().lower()
         duration = int(body.get("duration"))
 
         if not re.fullmatch(r"[A-Z0-9]{4,10}", code):
@@ -373,8 +446,11 @@ def create_test():
                 "success": False,
                 "message": "Test kodi faqat A–Z va 0–9 belgilaridan iborat, 4–10 ta belgili bo‘lishi kerak."
             }), 400
-        question_count = int(body.get("question_count"))
+        question_count = 45
         answer_key = body.get("answer_key") or {}
+        allowed_subjects = {"matematika", "fizika", "kimyo", "biologiya"}
+        if subject not in allowed_subjects:
+            return jsonify({"success": False, "message": "Fanni tanlang."}), 400
 
         if len(code) < 4 or len(code) > 10:
             return jsonify({
@@ -415,6 +491,7 @@ def create_test():
             channel,
             duration,
             question_count,
+            subject,
             answer_key
         )
 
@@ -431,6 +508,7 @@ def create_test():
             "🎉 TEST YARATILDI!\n\n"
             f"🔑 Test kodi: {code}\n"
             f"📢 Kanal: {channel}\n"
+            f"📚 Fan: {subject.title()}\n"
             f"📝 Savollar: {question_count} ta\n"
             f"⏱ Davomiyligi: {duration} daqiqa\n\n"
             "👥 Javob berganlar: 0 ta\n"
@@ -459,6 +537,7 @@ def create_test():
             "test_id": test_id,
             "code": code,
             "channel": channel,
+            "subject": subject,
             "duration": duration,
             "question_count": question_count,
             "ends_at": test["ends_at"]
@@ -480,6 +559,10 @@ def test_status(test_id):
             "success": False,
             "message": "Telegram foydalanuvchisi aniqlanmadi."
         }), 401
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
 
     test = get_mock_test(test_id)
     if not test:
@@ -509,6 +592,7 @@ def test_status(test_id):
         "success": True,
         "test_id": test_id,
         "code": test["code"],
+        "subject": (test["subject"] if "subject" in test.keys() else "matematika"),
         "participants": participants,
         "remaining": remaining,
         "ends_at": test["ends_at"],
@@ -565,21 +649,32 @@ def _normalize_multi_answer(value):
     return [text]
 
 
-def _answer_is_correct(question_number, given, right):
-    """Return True when the participant's answer is fully correct."""
+def _answer_parts_correct(question_number, given, right):
+    """Return correctness flags for independently scored answer parts."""
     n = int(question_number)
     if 36 <= n <= 45:
         given_parts = _normalize_multi_answer(given)
         right_parts = _normalize_multi_answer(right)
-        return (
-            len(given_parts) >= 2
-            and len(right_parts) >= 2
-            and bool(given_parts[0])
-            and bool(given_parts[1])
-            and given_parts[0] == right_parts[0]
-            and given_parts[1] == right_parts[1]
-        )
-    return bool(_normalize_answer(given)) and bool(_normalize_answer(right)) and _normalize_answer(given) == _normalize_answer(right)
+        given_parts = (given_parts + ["", ""])[:2]
+        right_parts = (right_parts + ["", ""])[:2]
+        return [
+            bool(given_parts[i]) and bool(right_parts[i]) and given_parts[i] == right_parts[i]
+            for i in range(2)
+        ]
+    g = _normalize_answer(given)
+    r = _normalize_answer(right)
+    return [bool(g) and bool(r) and g == r]
+
+
+def _answer_is_correct(question_number, given, right):
+    """True only if all parts of a question are correct (for legacy callers)."""
+    flags = _answer_parts_correct(question_number, given, right)
+    return bool(flags) and all(flags)
+
+
+def _answer_unit_count(question_count):
+    count = int(question_count or 0)
+    return count + sum(1 for n in range(36, min(45, count) + 1))
 
 
 def _grade(score):
@@ -661,25 +756,28 @@ ensure_participant_tables()
 
 
 def _calculate_scores_locked(connection, test):
-    """Calculate final dynamic scores. Caller owns the DB connection."""
+    """Calculate final score. Questions 36–45 are scored as separate a/b units."""
     cursor = connection.cursor()
     answer_key = _load_answer_key(test)
     question_count = int(test["question_count"] or len(answer_key))
     if question_count <= 0:
         return []
 
-    cursor.execute(
-        "SELECT * FROM mock_test_participants WHERE test_id = ? ORDER BY id ASC",
-        (test["id"],)
-    )
+    cursor.execute("SELECT * FROM mock_test_participants WHERE test_id = ? ORDER BY id ASC", (test["id"],))
     participants = cursor.fetchall()
     if not participants:
         return []
 
-    correct_by_question = {str(i): 0 for i in range(1, question_count + 1)}
-    parsed_answers = {}
-    correct_counts = {}
+    units = []
+    for number in range(1, question_count + 1):
+        if 36 <= number <= 45:
+            units.extend([(str(number), 0), (str(number), 1)])
+        else:
+            units.append((str(number), 0))
 
+    parsed_answers = {}
+    correct_by_unit = {f"{q}:{part}": 0 for q, part in units}
+    participant_flags = {}
     for participant in participants:
         try:
             answers = json.loads(participant["answers_json"] or "{}")
@@ -688,60 +786,57 @@ def _calculate_scores_locked(connection, test):
         except Exception:
             answers = {}
         parsed_answers[participant["id"]] = answers
-
-        correct = 0
-        for i in range(1, question_count + 1):
-            key = str(i)
-            given = answers.get(key, answers.get(i, ""))
+        flags_for_user = {}
+        for number in range(1, question_count + 1):
+            key = str(number)
+            given = answers.get(key, answers.get(number, ""))
             right = answer_key.get(key, "")
-            if _answer_is_correct(i, given, right):
-                correct += 1
-                correct_by_question[key] += 1
-        correct_counts[participant["id"]] = correct
+            flags = _answer_parts_correct(number, given, right)
+            flags_for_user[key] = flags
+            for part_index, is_correct in enumerate(flags):
+                unit_key = f"{key}:{part_index}"
+                if unit_key in correct_by_unit and is_correct:
+                    correct_by_unit[unit_key] += 1
+        participant_flags[participant["id"]] = flags_for_user
 
     total_participants = len(participants)
-    coefficients = {}
-    for i in range(1, question_count + 1):
-        fraction = correct_by_question[str(i)] / total_participants
-        coefficients[str(i)] = 2.0 - fraction
-
+    coefficients = {
+        unit: 2.0 - (correct_count / total_participants)
+        for unit, correct_count in correct_by_unit.items()
+    }
     total_possible = sum(coefficients.values()) or 1.0
+    answer_units = len(units)
     results = []
 
     for participant in participants:
         earned = 0.0
-        answers = parsed_answers[participant["id"]]
-        for i in range(1, question_count + 1):
-            key = str(i)
-            given = answers.get(key, answers.get(i, ""))
-            right = answer_key.get(key, "")
-            if _answer_is_correct(i, given, right):
-                earned += coefficients[key]
+        correct_count = 0
+        flags_for_user = participant_flags[participant["id"]]
+        for question_key, part_index in units:
+            flags = flags_for_user.get(question_key, [])
+            if part_index < len(flags) and flags[part_index]:
+                correct_count += 1
+                earned += coefficients[f"{question_key}:{part_index}"]
 
-        correct_count = correct_counts[participant["id"]]
-        # Umumiy ball dinamik koeffitsiyent bo‘yicha 0–100 oralig‘ida.
-        score = (earned / total_possible) * 100
-        # Milliy sertifikat uslubida: 65 ball = 100%. 65 dan yuqori ham 100%.
+        score = (earned / total_possible) * 100.0
         percent = min(100.0, max(0.0, (score / 65.0) * 100.0))
         grade = _grade(score)
-
         cursor.execute("""
             UPDATE mock_test_participants
             SET correct_count = ?, percent = ?, score = ?, grade = ?
             WHERE id = ?
         """, (correct_count, round(percent, 2), round(score, 2), grade, participant["id"]))
-
         results.append({
             "id": participant["id"],
             "telegram_id": int(participant["telegram_id"]),
             "submitted_at": participant["submitted_at"],
             "correct_count": correct_count,
+            "answer_unit_count": answer_units,
             "percent": round(percent, 2),
             "score": round(score, 2),
             "grade": grade,
         })
 
-    # Higher score first; correct count is the deterministic tie-breaker.
     results.sort(key=lambda x: (x["score"], x["correct_count"]), reverse=True)
     for rank, item in enumerate(results, 1):
         item["rank"] = rank
@@ -793,17 +888,18 @@ def _creator_pdf_results(test, results):
     title = ParagraphStyle("Title2", parent=styles["Title"], alignment=TA_CENTER, fontSize=15, leading=18)
     normal = ParagraphStyle("Small", parent=styles["Normal"], fontSize=7.2, leading=8.5)
     story = [Paragraph("NATIJALAR", title), Spacer(1, 3*mm),
-             Paragraph(f"Test kodi: <b>{test['code']}</b> &nbsp;&nbsp; Savollar: <b>{test['question_count']}</b> &nbsp;&nbsp; Ishtirokchilar: <b>{len(results)}</b>", normal),
+             Paragraph(f"Test kodi: <b>{test['code']}</b> &nbsp;&nbsp; Fan: <b>{test['subject'] if 'subject' in test.keys() else '—'}</b> &nbsp;&nbsp; Savollar: <b>{test['question_count']}</b> &nbsp;&nbsp; Ishtirokchilar: <b>{len(results)}</b>", normal),
              Spacer(1, 4*mm)]
-    data = [["№", "Ism familiya", "Umumiy ball", "Foiz", "Daraja"]]
+    data = [["№", "Ism familiya", "To‘g‘ri javob/qism", "Umumiy ball", "Foiz", "Daraja"]]
     for i, item in enumerate(results, 1):
         connection = get_connection(); cur = connection.cursor()
         cur.execute("SELECT full_name FROM users WHERE telegram_id = ?", (item["telegram_id"],))
         row = cur.fetchone(); connection.close()
         name = (row["full_name"] if row else "") or "Ism familiya kiritilmagan"
-        data.append([str(i), name, f"{item['score']:.2f}", f"{item['percent']:.2f}%", item['grade']])
+        max_units = int(item.get("answer_unit_count", _answer_unit_count(test["question_count"])))
+        data.append([str(i), name, f"{item['correct_count']}/{max_units}", f"{item['score']:.2f}", f"{item['percent']:.2f}%", item['grade']])
 
-    table = Table(data, repeatRows=1, colWidths=[10*mm, 75*mm, 35*mm, 30*mm, 25*mm])
+    table = Table(data, repeatRows=1, colWidths=[9*mm, 65*mm, 34*mm, 28*mm, 25*mm, 20*mm])
     ts = [
         ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1f2937")),
         ("TEXTCOLOR", (0,0), (-1,0), colors.white),
@@ -818,7 +914,7 @@ def _creator_pdf_results(test, results):
     ]
     grade_bg = {"A+":"#dcfce7", "A":"#ecfdf5", "B+":"#dbeafe", "B":"#fef3c7", "C+":"#ffedd5", "C":"#fee2e2", "NC":"#f3f4f6"}
     for r, item in enumerate(results, 1):
-        ts.append(("BACKGROUND", (4,r), (4,r), colors.HexColor(grade_bg.get(item["grade"], "#f3f4f6"))))
+        ts.append(("BACKGROUND", (5,r), (5,r), colors.HexColor(grade_bg.get(item["grade"], "#f3f4f6"))))
     table.setStyle(TableStyle(ts))
     story.append(table)
     doc.build(story)
@@ -844,6 +940,7 @@ def _creator_pdf_statistics(test, results):
     for r in results: grade_counts[r["grade"]] = grade_counts.get(r["grade"], 0) + 1
 
     correct_counts = [0] * question_count
+    correct_part_counts = [[0, 0] for _ in range(question_count)]
     for r in results:
         connection = get_connection(); cur = connection.cursor()
         cur.execute("SELECT answers_json FROM mock_test_participants WHERE id = ?", (r["id"],))
@@ -851,8 +948,12 @@ def _creator_pdf_statistics(test, results):
         try: answers = json.loads(row["answers_json"] or "{}") if row else {}
         except Exception: answers = {}
         for i in range(1, question_count + 1):
-            if _answer_is_correct(i, answers.get(str(i), ""), answer_key.get(str(i), "")):
-                correct_counts[i-1] += 1
+            flags = _answer_parts_correct(i, answers.get(str(i), ""), answer_key.get(str(i), ""))
+            correct_counts[i-1] += sum(1 for flag in flags if flag)
+            if 36 <= i <= 45:
+                for part_index, flag in enumerate(flags[:2]):
+                    if flag:
+                        correct_part_counts[i-1][part_index] += 1
 
     # Average time from creation to submission.
     created = _parse_dt(test["created_at"])
@@ -873,7 +974,7 @@ def _creator_pdf_statistics(test, results):
     ax.bar(range(1, question_count + 1), correct_counts)
     ax.set_title("Har bir savol bo‘yicha to‘g‘ri javoblar soni")
     ax.set_xlabel("Savollar")
-    ax.set_ylabel("To‘g‘ri javoblar soni")
+    ax.set_ylabel("To‘g‘ri javoblar/qismlar soni")
     ax.set_xticks(range(1, question_count + 1))
     ax.grid(axis="y", alpha=0.25)
     fig.savefig(chart, format="png", dpi=150)
@@ -896,7 +997,7 @@ def _creator_pdf_statistics(test, results):
 
     avg_min = int(avg_time // 60); avg_sec = int(avg_time % 60)
     overall = [
-        ["Test kodi", str(test["code"])], ["Jami qatnashchilar", str(total)], ["Yakunlaganlar", str(total)],
+        ["Test kodi", str(test["code"])], ["Fan", str(test["subject"] if "subject" in test.keys() else "—")], ["Jami qatnashchilar", str(total)], ["Yakunlaganlar", str(total)],
         ["O‘rtacha vaqt", f"{avg_min} daqiqa {avg_sec} soniya"], ["O‘rtacha natija", f"{avg_result:.2f}%"],
         ["Eng yuqori ball", f"{highest:.2f}"], ["Eng past ball", f"{lowest:.2f}"],
     ]
@@ -907,16 +1008,25 @@ def _creator_pdf_statistics(test, results):
               Paragraph("3. Har bir savol bo‘yicha berilgan ball", styles["Heading2"])]
     points_data = [["Savol", "To‘g‘ri javoblar", "Koeffitsiyent"]]
     for i, c in enumerate(correct_counts, 1):
-        coeff = 2.0 - (c / total) if total else 2.0
-        points_data.append([str(i), str(c), f"{coeff:.4f}"])
+        if 36 <= i <= 45:
+            a_count, b_count = correct_part_counts[i-1]
+            coeff_a = 2.0 - (a_count / total) if total else 2.0
+            coeff_b = 2.0 - (b_count / total) if total else 2.0
+            points_data.append([str(i), f"a) {a_count}; b) {b_count}", f"a) {coeff_a:.3f}; b) {coeff_b:.3f}"])
+        else:
+            coeff = 2.0 - (c / total) if total else 2.0
+            points_data.append([str(i), str(c), f"{coeff:.4f}"])
     pt = Table(points_data, repeatRows=1, colWidths=[25*mm, 40*mm, 45*mm])
     pt.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f2937")),("TEXTCOLOR",(0,0),(-1,0),colors.white),
                             ("GRID",(0,0),(-1,-1),0.3,colors.grey),("ALIGN",(0,0),(-1,-1),"CENTER"),("FONTSIZE",(0,0),(-1,-1),8)]))
     story += [pt, Spacer(1, 5*mm), Paragraph("4. Har bir savol bo‘yicha to‘g‘ri javoblar grafigi", styles["Heading2"]),
               Image(chart, width=180*mm, height=74*mm)]
 
-    easiest = sorted(range(1, question_count+1), key=lambda i: correct_counts[i-1], reverse=True)[:5]
-    hardest = sorted(range(1, question_count+1), key=lambda i: correct_counts[i-1])[:5]
+    def difficulty_ratio(number):
+        maximum = total * (2 if 36 <= number <= 45 else 1)
+        return (correct_counts[number-1] / maximum) if maximum else 0
+    easiest = sorted(range(1, question_count+1), key=difficulty_ratio, reverse=True)[:5]
+    hardest = sorted(range(1, question_count+1), key=difficulty_ratio)[:5]
     story += [Spacer(1, 3*mm), Paragraph(
         "Eng oson savollar: " + ", ".join(f"{i}-savol ({correct_counts[i-1]} ta)" for i in easiest) +
         "<br/>Eng qiyin savollar: " + ", ".join(f"{i}-savol ({correct_counts[i-1]} ta)" for i in hardest), small)]
@@ -939,8 +1049,9 @@ def _load_final_results(test_id):
     results=[]
     for rank,row in enumerate(rows,1):
         results.append({"id":int(row["id"]),"telegram_id":int(row["telegram_id"]),"submitted_at":row["submitted_at"],
-                        "correct_count":int(row["correct_count"] or 0),"percent":float(row["percent"] or 0),
-                        "score":float(row["score"] or 0),"grade":row["grade"] or "NC","rank":rank})
+                        "correct_count":int(row["correct_count"] or 0),"answer_unit_count":_answer_unit_count(test["question_count"]),
+                        "percent":float(row["percent"] or 0),"score":float(row["score"] or 0),
+                        "grade":row["grade"] or "NC","rank":rank})
     return test, results
 
 
@@ -965,7 +1076,8 @@ def _deliver_finished_test(test_id):
                 f"👤 Ishtirokchi: {name}\n\n"
                 "📊 NATIJA\n\n"
                 f"✅ To‘g‘ri javoblar: {item['correct_count']} ta\n"
-                f"❌ Noto‘g‘ri javoblar: {int(test['question_count'])-item['correct_count']} ta\n\n"
+                f"❌ Noto‘g‘ri javoblar: {int(item.get('answer_unit_count', _answer_unit_count(test['question_count'])))-item['correct_count']} ta\n"
+                f"📌 Hisoblangan javob qismlari: {item.get('answer_unit_count', _answer_unit_count(test['question_count']))} ta\n\n"
                 f"📈 Natija: {item['percent']:.2f}%\n"
                 f"⭐ Ball: {item['score']:.2f}\n\n"
                 f"🏆 Daraja: {item['grade']}\n\n"
@@ -1081,6 +1193,10 @@ def participant_test(code):
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
 
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
     code = str(code or "").strip().upper()
     if not re.fullmatch(r"[A-Z0-9]{4,10}", code):
         return jsonify({"success": False, "message": "Bunday test topilmadi."}), 404
@@ -1116,6 +1232,7 @@ def participant_test(code):
             "id": test["id"],
             "code": test["code"],
             "channel": test["channel"],
+            "subject": (test["subject"] if "subject" in test.keys() else "matematika"),
             "duration_minutes": int(test["duration_minutes"]),
             "question_count": int(test["question_count"]),
             "created_at": test["created_at"],
@@ -1134,6 +1251,10 @@ def participant_submit():
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
 
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
     body = request.get_json(silent=True) or {}
     code = str(body.get("code", "")).strip().upper()
     answers = body.get("answers") or {}
@@ -1164,7 +1285,13 @@ def participant_submit():
         connection.close()
         return jsonify({"success": False, "message": "Siz bu testni allaqachon topshirgansiz."}), 409
 
-    clean_answers = {str(k): _normalize_answer(v) for k, v in answers.items()}
+    clean_answers = {}
+    for k, value in answers.items():
+        try:
+            number = int(k)
+        except (TypeError, ValueError):
+            number = 0
+        clean_answers[str(k)] = _normalize_multi_answer(value) if 36 <= number <= 45 else _normalize_answer(value)
     submitted_at = _utc_now().isoformat()
     try:
         cursor.execute("""
@@ -1221,11 +1348,15 @@ def participant_results():
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
 
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
     _finalize_due_tests()
     connection = get_connection(); cursor = connection.cursor()
     cursor.execute("""
         SELECT p.id, p.test_id, p.submitted_at, p.correct_count, p.percent, p.score, p.grade,
-               t.code, t.question_count, t.status
+               t.code, t.question_count, t.subject, t.status
         FROM mock_test_participants p
         JOIN mock_tests t ON t.id = p.test_id
         WHERE p.telegram_id = ?
@@ -1235,8 +1366,9 @@ def participant_results():
 
     results=[]
     for row in rows:
-        item={"test_id":row["test_id"],"test_code":row["code"],"submitted_at":row["submitted_at"],
-              "question_count":int(row["question_count"]),"status":"finished" if row["status"]=="finished" else "waiting"}
+        item={"test_id":row["test_id"],"test_code":row["code"],"subject":row["subject"] if "subject" in row.keys() else "matematika","submitted_at":row["submitted_at"],
+              "question_count":int(row["question_count"]),"answer_unit_count":_answer_unit_count(row["question_count"]),
+              "status":"finished" if row["status"]=="finished" else "waiting"}
         if row["status"]=="finished":
             c=get_connection(); cur=c.cursor()
             cur.execute("""SELECT id, telegram_id, score, correct_count FROM mock_test_participants
@@ -1257,14 +1389,16 @@ def participant_profile():
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
 
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
     if request.method == "POST":
         body = request.get_json(silent=True) or {}
         full_name = str(body.get("full_name", "")).strip()
 
-        if len(full_name) < 2 or len(full_name) > 100:
-            return jsonify({"success": False, "message": "Ism familiyani to‘g‘ri kiriting."}), 400
-        if not any(ch.isalpha() for ch in full_name):
-            return jsonify({"success": False, "message": "Ism familiyani to‘g‘ri kiriting."}), 400
+        if not validate_full_name(full_name):
+            return jsonify({"success": False, "message": "Aynan 2 ta so‘z kiriting; har biri kamida 3 ta harfdan iborat bo‘lsin."}), 400
 
         # Profil nomi endi alohida participant_profiles jadvaliga emas,
         # umumiy users.full_name maydoniga saqlanadi.
@@ -1284,6 +1418,12 @@ def pro_cancel():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     payment = get_user_pending_payment(telegram_id)
     if not payment or payment["status"] != "pending":
         return jsonify({"success": False, "message": "Kutilayotgan PRO to'lov topilmadi yoki uni bekor qilib bo'lmaydi."}), 404
@@ -1296,6 +1436,12 @@ def pro_pending():
     telegram_id = get_telegram_user_id()
     if not telegram_id:
         return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+
+    blocked = _subscription_block(telegram_id)
+    if blocked:
+        return blocked
+
     payment = get_user_pending_payment(telegram_id)
     if not payment:
         return jsonify({"success": True, "pending": False})
