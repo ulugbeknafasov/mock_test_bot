@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, timezone
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from telegram.request import HTTPXRequest
 
@@ -1687,6 +1690,50 @@ async def reject_payment_callback(
 
 
 # =========================================================
+# RENDER WEB SERVICE HEALTH SERVER
+# =========================================================
+
+class HealthHandler(BaseHTTPRequestHandler):
+    """Render port tekshiruvi uchun sodda HTTP javob."""
+
+    def do_GET(self):
+        if self.path in ("/", "/health", "/healthz"):
+            body = b"OK - Telegram bot service is running"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            body = b"Not Found"
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        # Render loglarini ortiqcha to'ldirmaslik uchun.
+        return
+
+
+def start_health_server():
+    # Render PORT qiymatini avtomatik beradi.
+    port = int(os.environ.get("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+
+    thread = threading.Thread(
+        target=server.serve_forever,
+        name="render-health-server",
+        daemon=True,
+    )
+    thread.start()
+
+    print(f"🌐 HTTP server 0.0.0.0:{port} portida ishga tushdi.")
+    return server
+
+
+# =========================================================
 # MAIN
 # =========================================================
 
@@ -1699,6 +1746,9 @@ def main():
         )
 
     init_database()
+
+    # Render Web Service portini ochamiz; Telegram polling alohida davom etadi.
+    health_server = start_health_server()
 
     telegram_request = HTTPXRequest(
         connect_timeout=60.0,
