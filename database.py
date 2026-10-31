@@ -313,6 +313,84 @@ def init_database():
     connection.close()
 
 
+
+def validate_full_name(value):
+    """Format validation only: exactly two alphabetic name parts, 3+ letters each."""
+    import re
+    value = str(value or '').strip()
+    parts = re.split(r'\s+', value) if value else []
+    if len(parts) != 2 or len(value) > 100:
+        return False
+    apostrophes = {"'", "’", "‘", "ʻ", "ʼ", "`"}
+    for part in parts:
+        letters = sum(1 for ch in part if ch.isalpha())
+        if letters < 3:
+            return False
+        if any(not (ch.isalpha() or ch in apostrophes or ch == '-') for ch in part):
+            return False
+        if part[0] in apostrophes or part[-1] in apostrophes or '--' in part:
+            return False
+    return True
+
+
+def ensure_required_channels_table():
+    connection = get_connection()
+    try:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS required_channels (
+                channel_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                invite_link TEXT NOT NULL,
+                username TEXT,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def get_required_channels():
+    ensure_required_channels_table()
+    connection = get_connection()
+    try:
+        return connection.execute(
+            "SELECT * FROM required_channels ORDER BY added_at ASC"
+        ).fetchall()
+    finally:
+        connection.close()
+
+
+def add_required_channel(channel_id, title, invite_link, username=None):
+    ensure_required_channels_table()
+    connection = get_connection()
+    try:
+        connection.execute("""
+            INSERT INTO required_channels(channel_id, title, invite_link, username)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(channel_id) DO UPDATE SET
+                title=excluded.title,
+                invite_link=excluded.invite_link,
+                username=excluded.username
+        """, (str(channel_id), str(title), str(invite_link), username))
+        connection.commit()
+        return True
+    finally:
+        connection.close()
+
+
+def remove_required_channel(channel_id):
+    ensure_required_channels_table()
+    connection = get_connection()
+    try:
+        cur = connection.execute(
+            "DELETE FROM required_channels WHERE channel_id=?", (str(channel_id),)
+        )
+        connection.commit()
+        return cur.rowcount > 0
+    finally:
+        connection.close()
+
 # =========================================================
 # USERS
 # =========================================================
@@ -426,7 +504,7 @@ def is_name_confirmed(telegram_id):
 
 def confirm_full_name(telegram_id, full_name):
     full_name = str(full_name or "").strip()
-    if len(full_name) < 2 or len(full_name) > 100 or not any(ch.isalpha() for ch in full_name):
+    if not validate_full_name(full_name):
         return False
     connection = get_connection()
     cursor = connection.cursor()
@@ -443,7 +521,7 @@ def set_full_name(telegram_id, full_name):
     """Profil orqali ism-familiyani yangilaydi."""
     full_name = str(full_name or "").strip()
 
-    if len(full_name) < 2 or len(full_name) > 100:
+    if not validate_full_name(full_name):
         return False
 
     connection = get_connection()
