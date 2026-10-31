@@ -133,6 +133,9 @@ button{border:0;cursor:pointer}
 }
 
 </style>
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script defer src="formula-editor.js"></script>
+<style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
 <body>
@@ -448,6 +451,7 @@ function renderTest(){
 
     document.getElementById("testInfo").innerHTML =
         "📢 Kanal: <b>" + escapeHtml(currentTest.channel || "—") + "</b><br>" +
+        "📚 Fan: <b>" + escapeHtml(currentTest.subject || "—") + "</b><br>" +
         "📝 Savollar: <b>" + Number(currentTest.question_count || 0) + " ta</b>";
 
     const container = document.getElementById("questionsContainer");
@@ -525,6 +529,10 @@ function renderTest(){
             };
             inputA.addEventListener("input", savePair);
             inputB.addEventListener("input", savePair);
+            if (window.FormulaEditor) {
+                FormulaEditor.attach(inputA, currentTest.subject);
+                FormulaEditor.attach(inputB, currentTest.subject);
+            }
 
             const partA = document.createElement("div");
             partA.className = "dual-answer-part";
@@ -547,6 +555,7 @@ function renderTest(){
             input.addEventListener("input",()=>{
                 answers[String(number)] = input.value;
             });
+            if (window.FormulaEditor) FormulaEditor.attach(input, currentTest.subject);
             wrapper.appendChild(input);
         }else{
             const row = document.createElement("div");
@@ -624,7 +633,9 @@ async function submitTest(auto=false){
     for(let i=1;i<=questionCount;i++){
         if(i >= 36 && i <= 45){
             const pair = answers[String(i)];
-            if(!Array.isArray(pair) || !String(pair[0] || "").trim() || !String(pair[1] || "").trim()) missing.push(i);
+            // a) va b) must be scored independently: one part may be blank/wrong,
+            // while the other correct part still receives its own point.
+            if(!Array.isArray(pair) || (!String(pair[0] || "").trim() && !String(pair[1] || "").trim())) missing.push(i);
         }else if(!String(answers[String(i)] || "").trim()) {
             missing.push(i);
         }
@@ -726,8 +737,12 @@ async function loadResults(){
             const grade = item.grade || "NC";
             div.innerHTML =
                 '<div class="result-top">' +
-                '<b>📝 Test: ' + escapeHtml(item.code || "—") + '</b>' +
+                '<b>📝 Test: ' + escapeHtml(item.test_code || item.code || "—") + '</b>' +
                 '<span class="grade">' + escapeHtml(grade) + '</span>' +
+                '</div>' +
+                '<div class="small" style="margin-top:6px">' +
+                '📚 Fan: <b>' + escapeHtml(item.subject || "—") + '</b>' +
+                (item.status === "finished" ? ' &nbsp; ✅ To‘g‘ri: <b>' + escapeHtml(String(item.correct_count ?? 0)) + '/' + escapeHtml(String(item.answer_unit_count ?? item.question_count ?? 0)) + '</b>' : '') +
                 '</div>' +
                 '<div class="small" style="margin-top:8px">' +
                 '📈 Natija: <b>' + escapeHtml(String(item.percent ?? "—")) + '%</b>' +
