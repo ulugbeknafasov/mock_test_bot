@@ -1747,8 +1747,10 @@ def main():
 
     init_database()
 
-    # Render Web Service portini ochamiz; Telegram polling alohida davom etadi.
-    health_server = start_health_server()
+    # Flask server.py Render PORT portini egallaydi.
+    # Bot alohida jarayonda ishlaganda ikkinchi HTTP port ochmaymiz.
+    if os.environ.get("RUN_WITH_FLASK") != "1":
+        health_server = start_health_server()
 
     telegram_request = HTTPXRequest(
         connect_timeout=60.0,
