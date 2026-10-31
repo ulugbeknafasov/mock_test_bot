@@ -338,7 +338,7 @@ async def full_name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not validate_full_name(full_name):
         await update.message.reply_text(
             "❌ Ism-familiya formati noto‘g‘ri.\n\n"
-            "Aynan 2 ta so‘z kiriting; har biri kamida 3 ta harfdan iborat bo‘lsin.\n"
+            "❌ Iltimos ism-familiyangizni to'liq yozing.\n"
             "Masalan: Ulug‘bek Nafasov"
         )
         return
