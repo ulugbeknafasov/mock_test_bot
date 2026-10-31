@@ -984,7 +984,7 @@ async def admin_text_handler(
     if waiting_for == "full_name":
         user = update.effective_user
         if not validate_full_name(text):
-            await update.message.reply_text("❌ Aynan 2 ta so‘z kiriting; har biri kamida 3 ta harfdan iborat bo‘lsin. Masalan: Ulug‘bek Nafasov.")
+            await update.message.reply_text("📝Ism va familyangizni kiriting. Iltimos to'g'ri va to'liq yozing. Masalan: Ulug‘bek Nafasov.")
             return
         save_user(
             telegram_id=user.id,
