@@ -50,6 +50,10 @@ from database import (
     remove_admin,
     confirm_full_name,
     is_name_confirmed,
+    validate_full_name,
+    get_required_channels,
+    add_required_channel,
+    remove_required_channel,
 )
 
 
@@ -129,6 +133,7 @@ async def refresh_test_callback(update: Update, context: ContextTypes.DEFAULT_TY
             "🎉 <b>Test muvaffaqiyatli yaratildi!</b>\n\n"
             f"📝 Test kodi: <b>{test['code']}</b>\n"
             f"📢 Kanal: <b>{test['channel']}</b>\n"
+            f"📚 Fan: <b>{test['subject'] if 'subject' in test.keys() else '—'}</b>\n"
             f"❓ Savollar: <b>{test['question_count']} ta</b>\n"
             f"⏱ Davomiyligi: <b>{test['duration_minutes']} daqiqa</b>\n\n"
             f"👥 Javob berganlar: <b>{participants} ta</b>\n"
@@ -185,9 +190,100 @@ def get_main_keyboard(user_id):
 # START / ISM-FAMILIYA
 # =========================================================
 
+async def get_missing_subscriptions(bot, user_id):
+    if is_admin(user_id):
+        return []
+    missing = []
+    for channel in get_required_channels():
+        try:
+            member = await bot.get_chat_member(chat_id=channel["channel_id"], user_id=user_id)
+            joined = member.status in ("creator", "administrator", "member") or (
+                member.status == "restricted" and bool(getattr(member, "is_member", False))
+            )
+            if not joined:
+                missing.append(channel)
+        except Exception as error:
+            print("Majburiy obuna tekshirish xatosi:", error)
+            missing.append(channel)
+    return missing
+
+
+async def send_subscription_prompt(message, missing):
+    rows = [[InlineKeyboardButton("📢 " + str(ch["title"])[:45], url=ch["invite_link"])] for ch in missing]
+    rows.append([InlineKeyboardButton("🔄 Obunani tekshirish", callback_data="subscription_check")])
+    await message.reply_text(
+        "🔒 <b>Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling.</b>\n\n",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(rows)
+    )
+
+
+async def subscription_check_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer("Obuna tekshirilmoqda...")
+    missing = await get_missing_subscriptions(context.bot, query.from_user.id)
+    if missing:
+        rows = [[InlineKeyboardButton("📢 " + str(ch["title"])[:45], url=ch["invite_link"])] for ch in missing]
+        rows.append([InlineKeyboardButton("🔄 Qayta tekshirish", callback_data="subscription_check")])
+        await query.message.reply_text(
+            "❌ Hali barcha kanallarga obuna bo‘lmagansiz.",
+            reply_markup=InlineKeyboardMarkup(rows)
+        )
+        return
+    await query.message.reply_text("✅ Obuna tasdiqlandi. Davom etish uchun /start yuboring.")
+
+
+async def admin_required_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not is_admin(query.from_user.id):
+        await query.answer("Ruxsat yo‘q", show_alert=True); return
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    channels = get_required_channels()
+    lines = ["📢 <b>Majburiy obuna kanallari</b>", ""]
+    buttons = []
+    if not channels:
+        lines.append("Hozircha kanal qo‘shilmagan.")
+    for channel in channels:
+        lines.append(f"• {channel['title']} — <code>{channel['channel_id']}</code>")
+        buttons.append([InlineKeyboardButton("🗑 " + str(channel['title'])[:30], callback_data="required_channel_remove:" + str(channel['channel_id']))])
+    buttons.append([InlineKeyboardButton("➕ Kanal qo‘shish", callback_data="required_channel_add")])
+    buttons.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_panel")])
+    await query.message.reply_text("\n".join(lines), parse_mode="HTML", reply_markup=InlineKeyboardMarkup(buttons))
+
+
+async def admin_required_channel_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not is_admin(query.from_user.id):
+        await query.answer("Ruxsat yo‘q", show_alert=True); return
+    await query.answer()
+    context.user_data["waiting_for"] = "required_channel"
+    await query.message.reply_text(
+        "📢 Kanal username yoki ID sini yuboring.\nMasalan: <code>@kanal_nomi</code> yoki <code>-1001234567890</code>.\n\nBot avval shu kanalga admin qilingan bo‘lishi kerak.",
+        parse_mode="HTML"
+    )
+
+
+async def admin_required_channel_remove(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not is_admin(query.from_user.id):
+        await query.answer("Ruxsat yo‘q", show_alert=True); return
+    channel_id = query.data.split(":", 1)[1]
+    ok = remove_required_channel(channel_id)
+    await query.answer("Kanal o‘chirildi" if ok else "Kanal topilmadi", show_alert=True)
+    await admin_required_channels(update, context)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     telegram_id = user.id
+
+    missing_channels = await get_missing_subscriptions(context.bot, telegram_id)
+    if missing_channels:
+        await send_subscription_prompt(update.message, missing_channels)
+        return
 
     # Yangi foydalanuvchi uchun Telegram ma'lumotlarini saqlaymiz,
     # lekin asosiy ism sifatida full_name ishlatiladi.
@@ -239,17 +335,11 @@ async def full_name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = user.id
     full_name = update.message.text.strip()
 
-    if len(full_name) < 2 or len(full_name) > 100:
+    if not validate_full_name(full_name):
         await update.message.reply_text(
-            "❌ Ism-familiya noto‘g‘ri.\n\n"
-            "Iltimos, ism va familiyangizni qaytadan kiriting."
-        )
-        return
-
-    # Juda bo'sh/raqamlardan iborat ismni qabul qilmaymiz.
-    if not any(ch.isalpha() for ch in full_name):
-        await update.message.reply_text(
-            "❌ Ism-familiya faqat to‘g‘ri matn ko‘rinishida bo‘lishi kerak."
+            "❌ Ism-familiya formati noto‘g‘ri.\n\n"
+            "Aynan 2 ta so‘z kiriting; har biri kamida 3 ta harfdan iborat bo‘lsin.\n"
+            "Masalan: Ulug‘bek Nafasov"
         )
         return
 
@@ -334,6 +424,12 @@ async def admin_panel(
             InlineKeyboardButton(
                 "📢 Reklama",
                 callback_data="admin_broadcast"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "📢 Majburiy obuna",
+                callback_data="admin_required_channels"
             )
         ],
         [
@@ -884,8 +980,8 @@ async def admin_text_handler(
     # Ism-familiya barcha foydalanuvchilar uchun ishlaydi.
     if waiting_for == "full_name":
         user = update.effective_user
-        if len(text) < 2 or len(text) > 100 or not any(ch.isalpha() for ch in text):
-            await update.message.reply_text("❌ Ism-familiya noto‘g‘ri. Qaytadan kiriting.")
+        if not validate_full_name(text):
+            await update.message.reply_text("❌ Aynan 2 ta so‘z kiriting; har biri kamida 3 ta harfdan iborat bo‘lsin. Masalan: Ulug‘bek Nafasov.")
             return
         save_user(
             telegram_id=user.id,
@@ -904,6 +1000,34 @@ async def admin_text_handler(
         return
 
     if not is_admin(update.effective_user.id):
+        return
+
+    # -----------------------------------------------------
+    # MAJBURIY OBUNA KANALI QO‘SHISH
+    # -----------------------------------------------------
+    if waiting_for == "required_channel":
+        try:
+            chat = await context.bot.get_chat(text)
+            bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+            if bot_member.status not in ("administrator", "creator"):
+                await update.message.reply_text("❌ Bot bu kanalga admin qilinmagan. Avval botni admin qiling.")
+                return
+            invite_link = getattr(chat, "invite_link", None)
+            if not invite_link and getattr(chat, "username", None):
+                invite_link = "https://t.me/" + chat.username
+            if not invite_link:
+                created_link = await context.bot.create_chat_invite_link(chat.id)
+                invite_link = created_link.invite_link
+            add_required_channel(str(chat.id), chat.title or text, invite_link, getattr(chat, "username", None))
+            context.user_data.pop("waiting_for", None)
+            await update.message.reply_text(
+                f"✅ <b>{chat.title or text}</b> majburiy obunaga qo‘shildi.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📢 Kanallar", callback_data="admin_required_channels")]])
+            )
+        except Exception as error:
+            print("Required channel add error:", error)
+            await update.message.reply_text("❌ Kanalni qo‘shib bo‘lmadi. Kanal username/ID sini tekshiring va bot admin ekanini tasdiqlang.")
         return
 
     # -----------------------------------------------------
@@ -1608,6 +1732,12 @@ def main():
 
     # TEST HOLATI YANGILASH
     application.add_handler(CallbackQueryHandler(refresh_test_callback, pattern=r"^refresh_test:\d+$"))
+
+    # MAJBURIY OBUNA
+    application.add_handler(CallbackQueryHandler(subscription_check_callback, pattern="^subscription_check$"))
+    application.add_handler(CallbackQueryHandler(admin_required_channels, pattern="^admin_required_channels$"))
+    application.add_handler(CallbackQueryHandler(admin_required_channel_add, pattern="^required_channel_add$"))
+    application.add_handler(CallbackQueryHandler(admin_required_channel_remove, pattern=r"^required_channel_remove:.+$"))
 
     # ADMIN PANEL
     application.add_handler(
