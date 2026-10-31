@@ -875,8 +875,12 @@ img {
     .dual-answer-part .exact-answer { height:50px !important; min-height:50px !important; }
 }
 
+.subject-note{display:block;color:#64748b;font-size:12px;margin-top:6px}
 </style>
 
+<script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+<script defer src="formula-editor.js"></script>
+<style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
 
@@ -985,43 +989,15 @@ img {
 
 
         <div class="field">
-
-            <label>
-                📝 Savollar soni
-            </label>
-
-            <select id="questionCount">
-
-                <option value="">
-                    Tanlang
-                </option>
-
-                <option value="10">
-                    10 ta
-                </option>
-
-                <option value="20">
-                    20 ta
-                </option>
-
-                <option value="30">
-                    30 ta
-                </option>
-
-                <option value="35">
-                    35 ta
-                </option>
-
-                <option value="40">
-                    40 ta
-                </option>
-
-                <option value="45">
-                    45 ta
-                </option>
-
+            <label>📚 Fanni tanlang</label>
+            <select id="subject">
+                <option value="">Fanni tanlang</option>
+                <option value="matematika">Matematika</option>
+                <option value="fizika">Fizika</option>
+                <option value="kimyo">Kimyo</option>
+                <option value="biologiya">Biologiya</option>
             </select>
-
+            <small class="subject-note">Test 45 ta savol shaklida tuziladi.</small>
         </div>
 
 
@@ -1887,7 +1863,8 @@ async function continueCreate() {
     const testCode = document.getElementById("testCode").value.trim().toUpperCase();
     const channel = document.getElementById("channel").value.trim();
     const duration = document.getElementById("duration").value;
-    const questionCount = document.getElementById("questionCount").value;
+    const subject = document.getElementById("subject").value;
+    const questionCount = 45;
     const button = document.getElementById("continueButton");
 
     if (!testCode) {
@@ -1906,8 +1883,8 @@ async function continueCreate() {
         showMessage("❗ Test davomiyligini tanlang.");
         return;
     }
-    if (!questionCount) {
-        showMessage("❗ Savollar sonini tanlang.");
+    if (!subject) {
+        showMessage("❗ Fanni tanlang.");
         return;
     }
 
@@ -1931,7 +1908,8 @@ async function continueCreate() {
             code: testCode,
             channel: channel,
             duration: Number(duration),
-            questionCount: Number(questionCount)
+            questionCount: 45,
+            subject: subject
         };
 
         openAnswerKey();
@@ -2037,6 +2015,10 @@ function openAnswerKey() {
             };
             inputA.addEventListener("input", saveParts);
             inputB.addEventListener("input", saveParts);
+            if (window.FormulaEditor) {
+                FormulaEditor.attach(inputA, draft.subject);
+                FormulaEditor.attach(inputB, draft.subject);
+            }
 
             partA.appendChild(labelA);
             partA.appendChild(inputA);
@@ -2055,6 +2037,7 @@ function openAnswerKey() {
             input.addEventListener("input", function () {
                 window.answerKey[i] = input.value.trim();
             });
+            if (window.FormulaEditor) FormulaEditor.attach(input, draft.subject);
             row.appendChild(input);
         }
 
@@ -2108,7 +2091,8 @@ async function saveAnswerKey() {
             code: draft.code,
             channel: draft.channel,
             duration: Number(draft.duration),
-            question_count: Number(draft.questionCount),
+            question_count: 45,
+            subject: draft.subject,
             answer_key: window.answerKey
         };
 
@@ -2133,6 +2117,7 @@ async function saveAnswerKey() {
             "✅ Test muvaffaqiyatli yaratildi!\n\n" +
             "🔑 Test kodi: " + data.code + "\n" +
             "📢 Kanal: " + data.channel + "\n" +
+            "📚 Fan: " + (data.subject || draft.subject) + "\n" +
             "⏱ Davomiyligi: " + data.duration + " daqiqa\n" +
             "📝 Savollar: " + data.question_count + " ta\n\n" +
             "🤖 Bot sizga test holati haqida xabar yubordi."
