@@ -927,6 +927,7 @@ img {
                 placeholder="Masalan: ABC123"
                 autocomplete="off"
             >
+            <small id="testCodeStatus" class="subject-note" aria-live="polite"></small>
 
         </div>
 
@@ -1338,13 +1339,58 @@ document.addEventListener("dragstart", function (event) {
 document.addEventListener("selectstart", function (event) {
     if (!event.target.matches("input, textarea")) event.preventDefault();
 });
+let codeCheckTimer = null;
+let codeCheckSequence = 0;
+let codeAvailable = null;
+
+async function checkTestCodeAvailability(code, showError = true) {
+    const status = document.getElementById("testCodeStatus");
+    if (!/^[A-Z0-9]{4,10}$/.test(code)) {
+        codeAvailable = null;
+        if (status) status.textContent = code ? "Kod 4–10 ta belgi bo‘lishi kerak." : "";
+        return false;
+    }
+
+    const sequence = ++codeCheckSequence;
+    if (status) status.textContent = "⏳ Kod tekshirilmoqda...";
+    try {
+        const response = await fetch(
+            API_BASE + "/api/check-test-code?code=" + encodeURIComponent(code),
+            { headers: { "X-Telegram-Init-Data": tg.initData || "" } }
+        );
+        const data = await response.json();
+        if (sequence !== codeCheckSequence) return false;
+        codeAvailable = Boolean(response.ok && data.success && data.available);
+        if (status) {
+            status.textContent = codeAvailable
+                ? "✅ Bu kod bo‘sh."
+                : "❌ " + (data.message || "Bu kod band. Boshqa kod kiriting.");
+            status.style.color = codeAvailable ? "#15803d" : "#dc2626";
+        }
+        return codeAvailable;
+    } catch (error) {
+        codeAvailable = null;
+        if (status) status.textContent = "⚠️ Kodni tekshirib bo‘lmadi. Internetni tekshiring.";
+        if (showError) console.error("Test code check:", error);
+        return false;
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const codeInput = document.getElementById("testCode");
-    if (codeInput) {
-        codeInput.addEventListener("input", function () {
-            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-        });
-    }
+    if (!codeInput) return;
+    codeInput.addEventListener("input", function () {
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        codeAvailable = null;
+        clearTimeout(codeCheckTimer);
+        const value = this.value;
+        const status = document.getElementById("testCodeStatus");
+        if (value.length < 4) {
+            if (status) status.textContent = "";
+            return;
+        }
+        codeCheckTimer = setTimeout(() => checkTestCodeAvailability(value), 250);
+    });
 });
 
 /* =====================================
@@ -1888,9 +1934,15 @@ async function continueCreate() {
     }
 
     button.disabled = true;
-    button.textContent = "Tekshirilmoqda...";
+    button.textContent = "Kod tekshirilmoqda...";
 
     try {
+        const available = await checkTestCodeAvailability(testCode);
+        if (!available) {
+            showMessage("❌ Bu test kodi band yoki tekshirib bo‘lmadi. Boshqa kod kiriting.");
+            return;
+        }
+        button.textContent = "Tekshirilmoqda...";
         const proData = await checkProStatus();
 
         if (!proData || !proData.success) {
@@ -2092,6 +2144,7 @@ async function saveAnswerKey() {
             duration: Number(draft.duration),
             question_count: 45,
             subject: draft.subject,
+            answer_format: "dtm_45",
             answer_key: window.answerKey
         };
 
