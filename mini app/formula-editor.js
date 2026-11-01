@@ -6,80 +6,192 @@
   let activeSubject = "matematika";
   let modal = null;
   let editor = null;
-  let scriptPromise = null;
+  let mathLivePromise = null;
 
-  // =====================================
-  // RAQAMLAR
-  // =====================================
+  // =========================================
+  // 1. RAQAMLAR
+  // =========================================
 
   const NUMBERS = "0123456789".split("").map(x => ({
-    label: x, value: x
+    label: x,
+    value: x
   }));
 
-  // =====================================
-  // MATEMATIK HARFLAR
-  // =====================================
+  // =========================================
+  // 2. MATEMATIK HARFLAR
+  // =========================================
 
-  const LETTERS = [
-    ..."xyzabcdef".split(""),
-    ..."XYZABCDEF".split("")
-  ].map(x => ({label:x,value:x}));
+  const LETTERS = (
+    "abcdefghijklmnopqrstuvwxyz" +
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  ).split("").map(x => ({
+    label: x,
+    value: x
+  }));
 
-  // =====================================
-  // MATEMATIK AMALLAR
-  // =====================================
+  const GREEK = (
+    "α β γ δ ε ζ η θ ι κ λ μ ν ξ π ρ σ τ υ φ χ ψ ω " +
+    "Γ Δ Θ Λ Ξ Π Σ Φ Ψ Ω"
+  ).split(" ").map(x => ({
+    label: x,
+    value: x
+  }));
+
+  // =========================================
+  // 3. ASOSIY MATEMATIK BELGILAR
+  // =========================================
 
   const BASIC = [
-    ["+", "+"], ["−", "−"], ["×", "×"], ["÷", "÷"],
-    ["=", "="], ["≠", "≠"], ["≈", "≈"], ["±", "±"],
-    ["∓", "∓"], ["<", "<"], [">", ">"],
-    ["≤", "≤"], ["≥", "≥"], ["%", "%"],
+    ["+", "+"], ["−", "-"], ["×", "\\times"],
+    ["÷", "\\div"], ["=", "="], ["≠", "\\ne"],
+    ["≈", "\\approx"], ["±", "\\pm"], ["∓", "\\mp"],
+    ["<", "<"], [">", ">"], ["≤", "\\le"],
+    ["≥", "\\ge"], ["∞", "\\infty"], ["π", "\\pi"],
+    ["%", "\\%"], ["°", "^\\circ"],
     ["(", "("], [")", ")"], ["[", "["], ["]", "]"],
-    [",", ","], [".", "."], ["∞", "∞"], ["π", "π"]
-  ].map(([label,value]) => ({label,value}));
-
-  // =====================================
-  // FORMULA MUHARRIRI UCHUN TUGMALAR
-  // =====================================
-
-  const STRUCTURES = [
-    {label:"Kasr", command:"fraction"},
-    {label:"Ildiz", command:"sqrt"},
-    {label:"Kub ildiz", command:"cbrt"},
-    {label:"Daraja", command:"power"},
-    {label:"Indeks", command:"subscript"},
-    {label:"Qavs", command:"parentheses"},
-    {label:"Modul", command:"absolute"},
-    {label:"Matritsa", command:"matrix"}
+    ["{", "\\{"], ["}", "\\}"], [",", ","],
+    [".", "."], [":", ":"], [";", ";"],
+    ["|", "|"], ["!", "!"]
   ];
 
+  // =========================================
+  // 4. MATEMATIK FUNKSIYALAR
+  // =========================================
+
   const FUNCTIONS = [
-    "sin","cos","tg","ctg","tan","cot",
-    "sec","csc","log","ln","lg","lim",
-    "arcsin","arccos","arctg"
-  ].map(x => ({label:x,value:x}));
+    ["sin", "\\sin"],
+    ["cos", "\\cos"],
+    ["tg", "\\tan"],
+    ["ctg", "\\cot"],
+    ["tan", "\\tan"],
+    ["cot", "\\cot"],
+    ["sec", "\\sec"],
+    ["csc", "\\csc"],
+    ["arcsin", "\\arcsin"],
+    ["arccos", "\\arccos"],
+    ["arctg", "\\arctan"],
+    ["log", "\\log"],
+    ["ln", "\\ln"],
+    ["lg", "\\log"],
+    ["lim", "\\lim"],
+    ["max", "\\max"],
+    ["min", "\\min"],
+    ["sup", "\\sup"],
+    ["inf", "\\inf"],
+    ["det", "\\det"]
+  ];
 
-  const MATH_SYMBOLS = [
-    ..."∑∫∬∮∂∇∈∉⊂⊆∪∩∅∀∃⇒⇔⊥∥∠∝∴∵"
-  ].split("").map(x => ({label:x,value:x}));
+  // =========================================
+  // 5. MATEMATIK STRUKTURALAR
+  // =========================================
 
-  const GREEK = [
-    ..."αβγδεζηθικλμνξπρστυφχψω"
-  ].split("").map(x => ({label:x,value:x}));
+  const STRUCTURE_ROWS = [
+    [
+      {
+        label: "Kasr",
+        latex: "\\frac{#@}{#?}",
+        tooltip: "Surat va maxrajli kasr"
+      },
+      {
+        label: "Ildiz",
+        latex: "\\sqrt{#0}",
+        tooltip: "Kvadrat ildiz"
+      },
+      {
+        label: "n-ildiz",
+        latex: "\\sqrt[#?]{#0}",
+        tooltip: "Darajali ildiz"
+      },
+      {
+        label: "Daraja",
+        latex: "{#@}^{#?}",
+        tooltip: "Yuqori daraja"
+      },
+      {
+        label: "Indeks",
+        latex: "{#@}_{#?}",
+        tooltip: "Pastki indeks"
+      }
+    ],
+    [
+      "\\sum_{#?}^{#?}",
+      "\\prod_{#?}^{#?}",
+      "\\int_{#?}^{#?}",
+      "\\iint",
+      "\\oint"
+    ],
+    [
+      "\\lim_{x\\to #?}",
+      "\\frac{d}{dx}",
+      "\\partial",
+      "\\nabla",
+      "\\infty"
+    ],
+    [
+      "\\left(#0\\right)",
+      "\\left|#0\\right|",
+      "\\left\\{#0\\right\\}",
+      "\\left[#0\\right]",
+      "\\sqrt[3]{#0}"
+    ],
+    [
+      "\\binom{#?}{#?}",
+      "\\overline{#0}",
+      "\\vec{#0}",
+      "\\hat{#0}",
+      "\\dot{#0}"
+    ],
+    [
+      "\\begin{matrix}#@&#?\\\\#?&#?\\end{matrix}",
+      "\\begin{cases}#@\\\\#?\\end{cases}",
+      "\\begin{pmatrix}#@&#?\\\\#?&#?\\end{pmatrix}"
+    ]
+  ];
 
-  const PHYSICS = [
-    ..."FmasvtgPAEWNpρμλωTQIRqCB"
-  ].split("").map(x => ({label:x,value:x}));
+  // =========================================
+  // 6. QO'SHIMCHA BELGILAR
+  // =========================================
 
-  // =====================================
-  // KIMYO VA BIOLOGIYA
-  // =====================================
+  const ADVANCED_SYMBOLS = [
+    "\\sum", "\\prod", "\\int", "\\iint",
+    "\\iiint", "\\oint", "\\partial", "\\nabla",
+    "\\in", "\\notin", "\\subset", "\\subseteq",
+    "\\supset", "\\supseteq", "\\cup", "\\cap",
+    "\\emptyset", "\\forall", "\\exists",
+    "\\Rightarrow", "\\Leftrightarrow",
+    "\\perp", "\\parallel", "\\angle",
+    "\\therefore", "\\because", "\\propto",
+    "\\equiv", "\\cong", "\\sim",
+    "\\oplus", "\\otimes", "\\circ",
+    "\\vdots", "\\cdots", "\\ldots"
+  ];
+
+  // =========================================
+  // 7. FIZIKA BELGILARI
+  // =========================================
+
+  const PHYSICS_SYMBOLS = [
+    "F", "m", "a", "s", "v", "t", "g",
+    "P", "A", "E", "W", "N", "p", "ρ",
+    "μ", "λ", "T", "Q", "I", "R", "q",
+    "C", "B", "U", "J", "k", "h", "c",
+    "V", "f", "ω", "α", "β", "Δ",
+    "η", "φ", "ε", "σ", "τ", "γ"
+  ];
+
+  // =========================================
+  // 8. KIMYO VA BIOLOGIYA
+  // AVVALGI UNICODE KLAVIATURALARI
+  // =========================================
 
   const INDEX = [
     ..."⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻"
-  ].split("").map(x => ({label:x,value:x}))
+  ].map(x => ({ label:x, value:x }))
   .concat(
-    [..."₀₁₂₃₄₅₆₇₈₉"].map(x => ({label:x,value:x}))
+    [..."₀₁₂₃₄₅₆₇₈₉"].map(x => ({
+      label:x,
+      value:x
+    }))
   );
 
   const ELEMENTS = (
@@ -90,45 +202,59 @@
     "Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn " +
     "Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr " +
     "Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og"
-  ).split(" ").map(x => ({label:x,value:x}));
+  ).split(" ").map(x => ({
+    label:x,
+    value:x
+  }));
 
   const IONS = [
-    "H⁺","OH⁻","Na⁺","K⁺","Ag⁺",
-    "Ca²⁺","Mg²⁺","Ba²⁺","Zn²⁺",
-    "Cu²⁺","Fe²⁺","Fe³⁺","Al³⁺",
-    "Cl⁻","Br⁻","I⁻","NO₃⁻",
-    "SO₄²⁻","SO₃²⁻","CO₃²⁻",
-    "HCO₃⁻","PO₄³⁻","NH₄⁺",
-    "MnO₄⁻","Cr₂O₇²⁻"
-  ].map(x => ({label:x,value:x}));
+    "H⁺", "OH⁻", "Na⁺", "K⁺", "Ag⁺",
+    "Ca²⁺", "Mg²⁺", "Ba²⁺", "Zn²⁺",
+    "Cu²⁺", "Fe²⁺", "Fe³⁺", "Al³⁺",
+    "Cl⁻", "Br⁻", "I⁻", "NO₃⁻",
+    "SO₄²⁻", "SO₃²⁻", "CO₃²⁻",
+    "HCO₃⁻", "PO₄³⁻", "NH₄⁺",
+    "MnO₄⁻", "Cr₂O₇²⁻"
+  ].map(x => ({
+    label:x,
+    value:x
+  }));
 
   const CHEMICAL = [
-    "→","⇌","↔","↑","↓","Δ","°","·",
-    "+","−","=","(s)","(l)","(g)","(aq)","e⁻","hν","t°"
-  ].map(x => ({label:x,value:x}));
+    "→", "⇌", "↔", "↑", "↓", "Δ", "°", "·",
+    "+", "−", "=", "(s)", "(l)", "(g)",
+    "(aq)", "e⁻", "hν", "t°"
+  ].map(x => ({
+    label:x,
+    value:x
+  }));
 
   const BIOLOGY = [
-    "♀","♂","×","F₁","F₂","P",
-    "DNA","RNA","mRNA","tRNA",
-    "ATP","ADP","NAD","NADH",
-    "O₂","CO₂","H₂O","α","β","γ",
-    "Δ","→","↔","↑","↓",
-    "Aa","AA","aa","Xᴬ","Xᵃ",
-    "Y","XX","XY","n","2n","G₁","G₂"
-  ].map(x => ({label:x,value:x}));
+    "♀", "♂", "×", "F₁", "F₂", "P",
+    "DNA", "RNA", "mRNA", "tRNA",
+    "ATP", "ADP", "NAD", "NADH",
+    "O₂", "CO₂", "H₂O", "α", "β", "γ",
+    "Δ", "→", "↔", "↑", "↓",
+    "Aa", "AA", "aa", "Xᴬ", "Xᵃ",
+    "Y", "XX", "XY", "n", "2n",
+    "G₁", "G₂"
+  ].map(x => ({
+    label:x,
+    value:x
+  }));
 
-  // =====================================
-  // BO'LIMLAR
-  // =====================================
+  // =========================================
+  // 9. KLAVIATURA BO'LIMLARI
+  // =========================================
 
   const BANKS = {
     matematika: {
       "1. Raqamlar": NUMBERS,
       "2. Harflar": LETTERS,
       "3. Asosiy amallar": BASIC,
-      "4. Kasr, ildiz, daraja va indeks": STRUCTURES,
+      "4. Kasr, ildiz, daraja va indeks": STRUCTURE_ROWS,
       "5. Trigonometriya va funksiyalar": FUNCTIONS,
-      "6. Matematik belgilar": MATH_SYMBOLS,
+      "6. Matematik belgilar": ADVANCED_SYMBOLS,
       "7. Yunon harflari": GREEK
     },
 
@@ -136,9 +262,9 @@
       "1. Raqamlar": NUMBERS,
       "2. Harflar": LETTERS,
       "3. Asosiy amallar": BASIC,
-      "4. Kasr, ildiz, daraja va indeks": STRUCTURES,
+      "4. Kasr, ildiz, daraja va indeks": STRUCTURE_ROWS,
       "5. Matematik funksiyalar": FUNCTIONS,
-      "6. Fizik belgilar": PHYSICS,
+      "6. Fizik belgilar": PHYSICS_SYMBOLS,
       "7. Yunon harflari": GREEK
     },
 
@@ -158,36 +284,98 @@
     }
   };
 
-  // =====================================
-  // MATHLIVE YUKLASH
-  // =====================================
+  // =========================================
+  // 10. MATHLIVE YUKLASH
+  // =========================================
 
   function loadMathLive() {
     if (customElements.get("math-field")) {
       return Promise.resolve();
     }
 
-    if (scriptPromise) return scriptPromise;
+    if (mathLivePromise) return mathLivePromise;
 
-    scriptPromise = new Promise((resolve,reject) => {
+    mathLivePromise = new Promise((resolve,reject) => {
       const script = document.createElement("script");
+
       script.src = "https://cdn.jsdelivr.net/npm/mathlive";
-      script.onload = resolve;
-      script.onerror = () => reject(
-        new Error("Matematik muharrir yuklanmadi.")
-      );
+      script.onload = () => resolve();
+      script.onerror = () => {
+        mathLivePromise = null;
+        reject(new Error("MathLive yuklanmadi."));
+      };
+
       document.head.appendChild(script);
-    }).catch(error => {
-      scriptPromise = null;
-      throw error;
     });
 
-    return scriptPromise;
+    return mathLivePromise;
   }
 
-  // =====================================
-  // DIZAYN
-  // =====================================
+  // =========================================
+  // 11. MATHLIVE VIRTUAL KEYBOARD
+  // =========================================
+
+  function createMathLayouts(subject) {
+    const structures = {
+      label: "Kasr va formulalar",
+      tooltip: "Kasr, ildiz, daraja va boshqa formulalar",
+      rows: STRUCTURE_ROWS
+    };
+
+    const functionLayout = {
+      label: "Funksiyalar",
+      tooltip: "Matematik funksiyalar",
+      rows: [
+        ["\\sin", "\\cos", "\\tan", "\\cot", "\\sec", "\\csc"],
+        ["\\arcsin", "\\arccos", "\\arctan", "\\log", "\\ln", "\\exp"],
+        ["\\lim", "\\max", "\\min", "\\sup", "\\inf", "\\det"],
+        ["\\sinh", "\\cosh", "\\tanh", "\\gcd", "\\mod", "\\arg"]
+      ]
+    };
+
+    const layouts = [
+      "numeric",
+      "symbols",
+      functionLayout,
+      "alphabetic",
+      "greek",
+      structures
+    ];
+
+    if (subject === "fizika") {
+      layouts.push({
+        label: "Fizika",
+        tooltip: "Fizik kattaliklar va belgilar",
+        rows: [
+          ["F", "m", "a", "s", "v", "t", "g"],
+          ["P", "A", "E", "W", "N", "p", "ρ"],
+          ["μ", "λ", "T", "Q", "I", "R", "q"],
+          ["C", "B", "U", "J", "k", "h", "c"],
+          ["V", "f", "ω", "α", "β", "Δ", "η"],
+          ["φ", "ε", "σ", "τ", "γ", "\\Omega"]
+        ]
+      });
+    }
+
+    return layouts;
+  }
+
+  function configureMathKeyboard(subject) {
+    const vk = window.mathVirtualKeyboard;
+
+    if (!vk) {
+      throw new Error("MathLive virtual keyboard topilmadi.");
+    }
+
+    vk.layouts = createMathLayouts(subject);
+    vk.editToolbar = "default";
+    vk.container = document.body;
+    vk.alphabeticLayout = "qwerty";
+  }
+
+  // =========================================
+  // 12. DIZAYN
+  // =========================================
 
   function addStyles() {
     if (document.getElementById("formula-editor-styles")) return;
@@ -200,7 +388,7 @@
         position:fixed;
         inset:0;
         z-index:2147483000;
-        background:rgba(8,13,25,.75);
+        background:rgba(8,13,25,.76);
         display:flex;
         align-items:flex-end;
         justify-content:center;
@@ -208,11 +396,13 @@
         box-sizing:border-box;
       }
 
-      .fm-backdrop[hidden] { display:none!important; }
+      .fm-backdrop[hidden] {
+        display:none!important;
+      }
 
       .fm-panel {
-        width:min(520px,100%);
-        max-height:96dvh;
+        width:min(600px,100%);
+        max-height:94dvh;
         overflow-y:auto;
         background:#0756b8;
         color:white;
@@ -226,12 +416,12 @@
         justify-content:space-between;
         align-items:center;
         font-weight:bold;
-        margin-bottom:8px;
+        margin-bottom:9px;
       }
 
       .fm-close {
-        width:32px;
-        height:32px;
+        width:34px;
+        height:34px;
         border:0;
         border-radius:50%;
         background:#ffffff22;
@@ -242,18 +432,27 @@
       .fm-field {
         display:block;
         width:100%;
-        min-height:90px;
+        min-height:100px;
         background:white;
         color:#111827;
         border-radius:8px;
-        padding:8px;
-        font-size:23px;
-        margin-bottom:8px;
+        padding:10px;
+        font-size:24px;
+        margin-bottom:9px;
         box-sizing:border-box;
         border:none;
       }
 
-      .fm-section { margin:9px 0; }
+      math-field.fm-field {
+        --hue: 210;
+        --primary: #0756b8;
+        --selection-background-color: #bfdbfe;
+        --contains-highlight-background-color: #dbeafe;
+      }
+
+      .fm-section {
+        margin:9px 0;
+      }
 
       .fm-section-title {
         font-size:13px;
@@ -305,24 +504,6 @@
         transform:scale(.96);
       }
 
-      .fm-tools {
-        display:flex;
-        flex-wrap:wrap;
-        gap:5px;
-        margin:8px 0;
-      }
-
-      .fm-tools button {
-        flex:1 1 22%;
-        min-height:38px;
-        background:#dbeafe;
-        color:#0756b8;
-        border:0;
-        border-radius:6px;
-        font-weight:bold;
-        cursor:pointer;
-      }
-
       .fm-fixed-tools,.fm-actions {
         display:flex;
         gap:6px;
@@ -343,8 +524,15 @@
         color:white;
       }
 
-      .fm-cancel { background:#334155;color:white; }
-      .fm-save { background:#0f9f82;color:white; }
+      .fm-cancel {
+        background:#334155;
+        color:white;
+      }
+
+      .fm-save {
+        background:#0f9f82;
+        color:white;
+      }
 
       .fm-open {
         display:inline-flex;
@@ -360,14 +548,18 @@
         font-weight:bold;
         cursor:pointer;
       }
+
+      math-virtual-keyboard {
+        z-index:2147483001!important;
+      }
     `;
 
     document.head.appendChild(style);
   }
 
-  // =====================================
-  // MODAL
-  // =====================================
+  // =========================================
+  // 13. MODAL YARATISH
+  // =========================================
 
   function ensureModal() {
     if (modal) return;
@@ -387,8 +579,6 @@
         </div>
 
         <div id="fm-editor"></div>
-
-        <div id="fm-structure-tools"></div>
 
         <div id="fm-sections"></div>
 
@@ -411,61 +601,124 @@
 
     document.body.appendChild(modal);
 
-    modal.querySelector("#fm-close").addEventListener("click",close);
-    modal.querySelector("#fm-cancel").addEventListener("click",close);
-    modal.querySelector("#fm-save").addEventListener("click",save);
+    modal.querySelector("#fm-close")
+      .addEventListener("click",close);
 
-    modal.querySelector("#fm-backspace").addEventListener("click",() => {
-      if (activeSubject === "matematika" || activeSubject === "fizika") {
-        editor.executeCommand("deleteBackward");
-        editor.focus();
-      } else {
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        if (start !== end) {
-          editor.setRangeText("",start,end,"end");
-        } else if (start > 0) {
-          editor.setRangeText("",start-1,start,"end");
+    modal.querySelector("#fm-cancel")
+      .addEventListener("click",close);
+
+    modal.querySelector("#fm-save")
+      .addEventListener("click",save);
+
+    modal.querySelector("#fm-clear")
+      .addEventListener("click",() => {
+        if (
+          activeSubject === "matematika" ||
+          activeSubject === "fizika"
+        ) {
+          editor.setValue("");
+          editor.focus();
+        } else {
+          editor.value = "";
+          editor.focus();
         }
-        editor.focus();
-      }
-    });
+      });
 
-    modal.querySelector("#fm-clear").addEventListener("click",() => {
-      editor.value = "";
-      editor.focus();
-    });
+    modal.querySelector("#fm-backspace")
+      .addEventListener("click",() => {
+        if (
+          activeSubject === "matematika" ||
+          activeSubject === "fizika"
+        ) {
+          editor.executeCommand("deleteBackward");
+          editor.focus();
+        } else {
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+
+          if (start !== end) {
+            editor.setRangeText("",start,end,"end");
+          } else if (start > 0) {
+            editor.setRangeText("",start-1,start,"end");
+          }
+
+          editor.focus();
+        }
+      });
 
     modal.addEventListener("click",ev => {
       if (ev.target === modal) close();
     });
   }
 
-  // =====================================
-  // MATEMATIK TUZILMALAR
-  // =====================================
+  // =========================================
+  // 14. MATEMATIK MUHARRIR
+  // =========================================
 
-  function insertStructure(command) {
-    if (!editor) return;
+  async function setupMathEditor() {
+    await loadMathLive();
 
-    const commands = {
-      fraction: "\\frac{#@}{#?}",
-      sqrt: "\\sqrt{#@}",
-      cbrt: "\\sqrt[3]{#@}",
-      power: "^{#@}",
-      subscript: "_{#@}",
-      parentheses: "(#@)",
-      absolute: "|#@|",
-      matrix: "\\begin{matrix}#@&\\\\#?&\\end{matrix}"
-    };
+    const host = modal.querySelector("#fm-editor");
+    host.replaceChildren();
+
+    editor = document.createElement("math-field");
+    editor.className = "fm-field";
+
+    editor.setAttribute(
+      "math-virtual-keyboard-policy",
+      "manual"
+    );
+
+    editor.mathVirtualKeyboardPolicy = "manual";
+
+    host.appendChild(editor);
+
+    configureMathKeyboard(activeSubject);
+
+    editor.addEventListener("focusin",() => {
+      configureMathKeyboard(activeSubject);
+      window.mathVirtualKeyboard.show();
+    });
+
+    editor.addEventListener("click",() => {
+      window.mathVirtualKeyboard.show();
+    });
 
     editor.focus();
-    editor.insert(commands[command] || "");
+    window.mathVirtualKeyboard.show();
   }
 
-  // =====================================
-  // KLAVIATURA CHIZISH
-  // =====================================
+  // =========================================
+  // 15. KIMYO VA BIOLOGIYA MUHARRIRI
+  // =========================================
+
+  function setupUnicodeEditor() {
+    const host = modal.querySelector("#fm-editor");
+    host.replaceChildren();
+
+    editor = document.createElement("textarea");
+    editor.className = "fm-field";
+    editor.placeholder = "Javobingizni kiriting...";
+    editor.spellcheck = false;
+
+    host.appendChild(editor);
+  }
+
+  // =========================================
+  // 16. UNICODE BELGILARINI KIRITISH
+  // =========================================
+
+  function insertUnicode(value) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+
+    editor.setRangeText(value,start,end,"end");
+    editor.focus();
+  }
+
+  // =========================================
+  // 17. KLAVIATURA BO'LIMLARINI CHIZISH
+  // =========================================
 
   function renderBank() {
     const container = modal.querySelector("#fm-sections");
@@ -480,6 +733,7 @@
         const heading = document.createElement("div");
         heading.className = "fm-section-title";
         heading.textContent = title;
+
         section.appendChild(heading);
 
         const grid = document.createElement("div");
@@ -490,24 +744,37 @@
           "fm-grid";
 
         items.forEach(item => {
+          // Matematika va fizikada MathLive virtual
+          // klaviaturasi ishlatiladi.
+          // Kimyo va biologiya Unicode tugmalari ishlaydi.
+
+          const label =
+            typeof item === "string" ? item :
+            item.label;
+
+          const value =
+            typeof item === "string" ? item :
+            item.value;
+
           const button = document.createElement("button");
           button.type = "button";
           button.className = "fm-key";
-          button.textContent = item.label;
+          button.textContent = label;
 
           button.addEventListener("click",ev => {
             ev.preventDefault();
 
-            if (item.command) {
-              insertStructure(item.command);
-            } else if (
+            if (
               activeSubject === "matematika" ||
               activeSubject === "fizika"
             ) {
               editor.focus();
-              editor.insert(item.value);
+
+              if (typeof value === "string") {
+                editor.insert(value);
+              }
             } else {
-              insertUnicode(item.value);
+              insertUnicode(value);
             }
           });
 
@@ -520,75 +787,29 @@
     );
   }
 
-  function insertUnicode(value) {
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-
-    editor.setRangeText(value,start,end,"end");
-    editor.focus();
-  }
-
-  // =====================================
-  // MUHARRIR TURINI O'RNATISH
-  // =====================================
-
-  async function setupEditor() {
-    const host = modal.querySelector("#fm-editor");
-    host.replaceChildren();
-
-    if (
-      activeSubject === "matematika" ||
-      activeSubject === "fizika"
-    ) {
-      await loadMathLive();
-
-      editor = document.createElement("math-field");
-      editor.className = "fm-field";
-      editor.setAttribute("virtual-keyboard-mode","manual");
-
-      host.appendChild(editor);
-
-      const tools = modal.querySelector("#fm-structure-tools");
-      tools.replaceChildren();
-
-      const row = document.createElement("div");
-      row.className = "fm-tools";
-
-      STRUCTURES.forEach(item => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = item.label;
-
-        button.addEventListener("click",() => {
-          insertStructure(item.command);
-        });
-
-        row.appendChild(button);
-      });
-
-      tools.appendChild(row);
-
-    } else {
-      editor = document.createElement("textarea");
-      editor.className = "fm-field";
-      editor.placeholder = "Javobingizni kiriting...";
-      editor.spellcheck = false;
-
-      host.appendChild(editor);
-      modal.querySelector("#fm-structure-tools").replaceChildren();
-    }
-  }
-
-  // =====================================
-  // OCHISH
-  // =====================================
+  // =========================================
+  // 18. MUHARRIRNI OCHISH
+  // =========================================
 
   async function open(target,subject) {
     if (!target) return;
 
     activeTarget = target;
 
-    const key = String(subject || "matematika").toLowerCase().trim();
+    const aliases = {
+      math:"matematika",
+      mathematics:"matematika",
+      physics:"fizika",
+      chemistry:"kimyo",
+      biology:"biologiya"
+    };
+
+    let key = String(subject || "matematika")
+      .toLowerCase()
+      .trim();
+
+    key = aliases[key] || key;
+
     activeSubject = BANKS[key] ? key : "matematika";
 
     ensureModal();
@@ -600,46 +821,51 @@
       biologiya:"Biologiya — Unicode klaviatura"
     };
 
-    modal.querySelector("#fm-title").textContent = titles[activeSubject];
+    modal.querySelector("#fm-title").textContent =
+      titles[activeSubject];
+
     modal.hidden = false;
 
     try {
-      await setupEditor();
-
-      if (!activeTarget) return;
-
       if (
         activeSubject === "matematika" ||
         activeSubject === "fizika"
       ) {
-        // MathJSON formatida oldingi saqlangan formulani tiklash
+        await setupMathEditor();
+
         const oldValue = target.value || "";
 
         if (oldValue.startsWith("MATHJSON:")) {
-          editor.setValue(
-            JSON.parse(oldValue.slice(9)),
-            "math-json"
-          );
-        } else {
+          const data = JSON.parse(oldValue.slice(9));
+
+          editor.setValue(data,"math-json");
+        } else if (oldValue.trim()) {
           editor.value = oldValue;
         }
 
       } else {
+        setupUnicodeEditor();
         editor.value = target.value || "";
       }
 
       renderBank();
+
       editor.focus();
 
     } catch(error) {
-      alert(error.message || "Muharrirni yuklashda xatolik.");
+      console.error(error);
+      alert(
+        "Formula muharririni ochishda xatolik: " +
+        (error.message || error)
+      );
+
       close();
     }
   }
 
-  // =====================================
-  // SAQLASH
-  // =====================================
+  // =========================================
+  // 19. JAVOBNI SAQLASH
+  // =========================================
 
   function save() {
     if (!activeTarget || !editor) {
@@ -651,13 +877,14 @@
       activeSubject === "matematika" ||
       activeSubject === "fizika"
     ) {
-      // LaTeX emas, strukturali MathJSON
+      // LaTeX emas: MathJSON formatida saqlanadi.
       const mathJSON = editor.getValue("math-json");
 
       activeTarget.value =
         "MATHJSON:" + JSON.stringify(mathJSON);
 
     } else {
+      // Kimyo va biologiya o'z holicha qoladi.
       activeTarget.value = editor.value;
     }
 
@@ -672,21 +899,32 @@
     close();
   }
 
-  // =====================================
-  // YOPISH
-  // =====================================
+  // =========================================
+  // 20. YOPISH
+  // =========================================
 
   function close() {
+    if (
+      window.mathVirtualKeyboard &&
+      window.mathVirtualKeyboard.visible
+    ) {
+      window.mathVirtualKeyboard.hide();
+    }
+
     if (modal) modal.hidden = true;
+
     activeTarget = null;
+    editor = null;
   }
 
-  // =====================================
-  // BOTGA ULASH
-  // =====================================
+  // =========================================
+  // 21. BOTGA ULASH
+  // =========================================
 
   function attach(target,subject) {
-    if (!target || target.dataset.formulaButtonAttached === "1") {
+    if (!target) return;
+
+    if (target.dataset.formulaButtonAttached === "1") {
       return;
     }
 
@@ -695,32 +933,27 @@
     const selectedSubject =
       String(subject || "matematika").toLowerCase();
 
-    function openForTarget(event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-
-      target.blur();
-      open(target,selectedSubject);
-    }
-
-    target.addEventListener("click",openForTarget);
-
     const button = document.createElement("button");
+
     button.type = "button";
     button.className = "fm-open";
     button.textContent = "∑";
-    button.title = "Formula muharririni ochish";
+    button.title = "Formula klaviaturasini ochish";
 
-    button.addEventListener("click",openForTarget);
+    button.addEventListener("click",ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      target.blur();
+      open(target,selectedSubject);
+    });
 
     target.insertAdjacentElement("afterend",button);
   }
 
-  // =====================================
-  // API
-  // =====================================
+  // =========================================
+  // 22. ESKI INTEGRATSIYA API
+  // =========================================
 
   window.FormulaEditor = {
     open,
