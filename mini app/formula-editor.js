@@ -1108,56 +1108,47 @@
     modal.hidden = false;
 
     if (IS_MATH()) {
-      try {
-        await loadMathLive();
+  try {
+    await loadMathLive();
 
-        if (
-          !activeTarget ||
-          activeTarget !== currentTarget
-        ) {
-          return;
+    if (!activeTarget || activeTarget !== currentTarget) {
+      return;
+    }
+
+    unicodeEditor.hidden = true;
+    mathEditor.hidden = false;
+
+    // SHU QATORLARNI ANIQLAB QO'SHING / TEKSHIRING:
+    mathEditor.mathVirtualKeyboardPolicy = "manual";
+    mathEditor.setAttribute("virtual-keyboard-mode", "manual");
+    mathEditor.setAttribute("inputmode", "none");
+
+    let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
+    mathEditor.value = visualField ? visualField.value : (target.value || "");
+
+    if (!mathEditor.dataset.keyboardConfigured) {
+      mathEditor.addEventListener("focus", () => {
+        if (window.mathVirtualKeyboard) {
+          window.mathVirtualKeyboard.layouts = [
+            "numeric",
+            "alphabetic",
+            "symbols",
+            "greek"
+          ];
+          window.mathVirtualKeyboard.hide(); // Standart MathLive klaviaturasini yashirish
         }
+      });
+      mathEditor.dataset.keyboardConfigured = "1";
+    }
 
-        unicodeEditor.hidden = true;
-        mathEditor.hidden = false;
+    renderBank();
+    mathEditor.blur();
+    setTimeout(() => mathEditor.focus(), 50);
 
-        mathEditor.setAttribute("inputmode", "none");
-        mathEditor.setAttribute("virtual-keyboard-mode", "manual");
-        mathEditor.mathVirtualKeyboardPolicy = "manual";
-
-        // Agar oldindan vizual elementda qiymat bo'lsa shuni o'qiymiz, yo'qsa inputdan
-        let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
-        mathEditor.value = visualField ? visualField.value : (target.value || "");
-
-        if (!mathEditor.dataset.keyboardConfigured) {
-          mathEditor.addEventListener("focus", () => {
-            if (window.mathVirtualKeyboard) {
-              window.mathVirtualKeyboard.layouts = [
-                "numeric",
-                "alphabetic",
-                "symbols",
-                "greek"
-              ];
-
-              window.mathVirtualKeyboard.show();
-            }
-          });
-
-          mathEditor.dataset.keyboardConfigured = "1";
-        }
-
-        renderBank();
-        mathEditor.focus();
-
-      } catch (error) {
-        console.error("MathLive xatosi:", error);
-
-        alert(
-          "Matematik muharrir yuklanmadi. Internetni tekshiring."
-        );
-
-        close();
-      }
+  } catch (error) {
+    console.error("MathLive xatosi:", error);
+  }
+}
 
     } else {
       mathEditor.hidden = true;
