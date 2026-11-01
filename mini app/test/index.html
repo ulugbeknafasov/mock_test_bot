@@ -39,21 +39,16 @@ button{border:0;cursor:pointer}
 .info-title{font-size:13px;color:#777;margin-bottom:5px}
 .info-value{font-size:17px;font-weight:700}
 .timer{position:sticky;top:8px;z-index:10;background:#fff1f1;border-radius:14px;padding:13px;text-align:center;font-weight:700;margin-bottom:14px}
-.question{background:#fff;border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.question-title{font-weight:700;margin-bottom:12px}
-.answer-row{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
-.question{background:#fff;border-radius:14px;padding:12px 8px;margin-bottom:8px;box-shadow:none;border:1px solid #edf0f4;display:flex;align-items:flex-start;gap:10px}
+.question{background:#fff;border-radius:14px;padding:12px 10px;margin-bottom:10px;box-shadow:none;border:1px solid #edf0f4;display:flex;align-items:flex-start;gap:10px}
 .question-title{font-weight:700;min-width:48px;flex:0 0 48px;margin:4px 0 0;font-size:16px}
 .answer-row{display:flex;align-items:center;justify-content:flex-start;gap:12px;flex:1;flex-wrap:nowrap}
 .answer{width:44px;height:44px;min-width:44px;border:2px solid #cbd2dc;border-radius:50%;background:#fff;font-weight:700;font-size:16px;padding:0;display:flex;align-items:center;justify-content:center}
 .answer.selected{background:#2481cc;color:#fff;border-color:#2481cc}
 .answer:hover{border-color:#2481cc}
-.exact-answer{flex:1;width:100%;height:46px;border:1px solid #d9dee7;border-radius:12px;padding:0 12px;outline:none}
-.exact-answer{width:100%;height:48px;border:1px solid #d9dee7;border-radius:12px;padding:0 12px;outline:none}
+.exact-answer{flex:1;width:100%;height:46px;border:1px solid #d9dee7;border-radius:12px;padding:0 12px;outline:none;font-size:15px}
 .dual-answer{width:100%;display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-width:0;padding:2px 0 4px}
-.dual-answer-part{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:7px;width:100%;min-width:0;min-height:46px}
+.dual-answer-part{display:grid;grid-template-columns:28px minmax(0,1fr) 40px;align-items:center;gap:7px;width:100%;min-width:0;min-height:46px}
 .dual-answer-label{font-weight:700;font-size:15px;color:#333}
-.dual-answer .exact-answer{flex:1;width:100%;min-width:0;height:46px;box-sizing:border-box;display:block}
 .bottom-nav{position:fixed;left:0;right:0;bottom:0;height:72px;background:rgba(255,255,255,.97);border-top:1px solid #e4e7ec;display:flex;justify-content:space-around;align-items:center;z-index:900;padding-bottom:env(safe-area-inset-bottom)}
 .nav-button{width:33.33%;height:64px;background:none;color:#777;font-size:12px;font-weight:600}
 .nav-icon{display:block;font-size:22px;margin-bottom:3px}
@@ -71,17 +66,11 @@ button{border:0;cursor:pointer}
 .answer-note{background:#f1f5f9;border-radius:14px;padding:14px;margin-bottom:14px;line-height:1.5;color:#334155}
 .answer-modal-box #questionsContainer{padding-bottom:4px}
 
-@media (max-width:420px){
-.answer-row{gap:8px}
-.answer{width:40px;height:40px;min-width:40px;font-size:15px}
-.question-title{min-width:44px;font-size:15px}
-}
-@media (max-width:420px){
- .dual-answer-part{grid-template-columns:25px minmax(0,1fr);gap:6px}
- .dual-answer .exact-answer{height:44px;font-size:14px}
-}
+/* MathLive formula tugmasi va joylashuvi */
+.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0;height:46px;border-radius:10px;background:#f0f7ff;border:1px solid #2481cc;color:#2481cc;font-weight:bold;cursor:pointer}
+.question > .fm-open{height:46px;margin-top:2px;border-radius:10px;background:#f0f7ff;border:1px solid #2481cc;color:#2481cc;font-weight:bold;cursor:pointer}
 
-/* FINAL FIX: 36-45 dual answers - generous spacing, no overlap */
+/* 36-45 dual answers */
 .question.dual-question {
     display:flex !important;
     align-items:flex-start !important;
@@ -108,7 +97,7 @@ button{border:0;cursor:pointer}
 }
 .dual-answer-part {
     display:grid !important;
-    grid-template-columns:30px minmax(0,1fr) !important;
+    grid-template-columns:28px minmax(0,1fr) 40px !important;
     align-items:center !important;
     gap:8px !important;
     min-height:50px !important;
@@ -120,67 +109,28 @@ button{border:0;cursor:pointer}
 }
 .dual-answer .exact-answer {
     width:100% !important;
-    height:50px !important;
-    min-height:50px !important;
+    height:46px !important;
+    min-height:46px !important;
     box-sizing:border-box !important;
 }
-@media(max-width:420px){
-    .question.dual-question { min-height:150px !important; padding:16px 8px 22px !important; margin-bottom:18px !important; gap:10px !important; }
-    .question.dual-question .question-title { flex-basis:44px !important; min-width:44px !important; }
-    .dual-answer { gap:19px !important; }
-    .dual-answer-part { grid-template-columns:28px minmax(0,1fr) !important; min-height:52px !important; gap:8px !important; }
-    .dual-answer .exact-answer { height:52px !important; min-height:52px !important; }
-}
-
-
-.math-answer-field {
-    display:block; min-width:0; width:100%; min-height:46px;
-    padding:8px 10px; border:1px solid #d9dee7; border-radius:12px;
-    background:#fff; color:#172033; font-size:20px;
-    box-sizing:border-box; --caret-color:#2481cc;
-}
-.math-answer-field:focus-within { border-color:#2481cc; outline:none; }
-
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 <script defer src="formula-editor.js"></script>
-<script>
-// Aniq javoblar uchun MathLive maydoni: qiymat LaTeX ko‘rinishida saqlanadi.
-function createMathAnswerField(placeholder, initialValue = "") {
-    const field = document.createElement("math-field");
-    field.className = "exact-answer math-answer-field";
-    field.setAttribute("virtual-keyboard-mode", "onfocus");
-    field.setAttribute("smart-fence", "true");
-    field.setAttribute("smart-superscript", "true");
-    field.setAttribute("default-mode", "math");
-    field.setAttribute("aria-label", placeholder || "Formula javobi");
-    field.setAttribute("placeholder", placeholder || "Javob");
-    field.value = initialValue || "";
-    field.addEventListener("input", () => {
-        field.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    return field;
-}
-</script>
-<style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
 <body>
 
 <div class="container">
-
     <section id="homeSection">
         <div class="welcome">
             <h1 id="welcomeText">👋 Assalomu alaykum!</h1>
             <p>Mock Test platformasiga xush kelibsiz.</p>
         </div>
-
         <div class="card">
             <h2>📝 Testni boshlash</h2>
             <p class="small">Test kodini kiriting va test holatini tekshiring.</p>
             <button class="primary" onclick="openStartModal()">📝 Testni boshlash</button>
         </div>
-
         <div id="homeMessage" class="message hidden"></div>
     </section>
 
@@ -197,19 +147,16 @@ function createMathAnswerField(placeholder, initialValue = "") {
             <h1>👤 Profil</h1>
             <p>Profil ma'lumotlaringiz.</p>
         </div>
-
         <div class="card profile-center">
             <div id="profileAvatar" class="profile-avatar">U</div>
             <h2 id="profileName">Ism familiya</h2>
             <div id="profileUsername" class="small">Telegram username</div>
         </div>
-
         <div class="card">
             <div class="info">
                 <div class="info-title">Telegram ID</div>
                 <div id="profileTelegramId" class="info-value">—</div>
             </div>
-
             <button class="primary" onclick="openNameModal()">✏️ Ism-familiyani o‘zgartirish</button>
         </div>
     </section>
@@ -240,10 +187,8 @@ function createMathAnswerField(placeholder, initialValue = "") {
             <h2 id="testTitle">📝 Test</h2>
             <button class="close" onclick="closeTestWithoutSubmit()">✕</button>
         </div>
-
         <div id="testTimer" class="timer">⏳ Taymer tayyorlanmoqda...</div>
         <div id="testInfo" class="info"></div>
-
         <button class="primary" onclick="openAnswerModal()">📝 Javob berish</button>
     </div>
 </div>
@@ -255,16 +200,12 @@ function createMathAnswerField(placeholder, initialValue = "") {
             <h2>📝 Javoblar</h2>
             <button class="close" onclick="closeAnswerModal()">✕</button>
         </div>
-
         <div id="answerTimer" class="timer">⏳ Qolgan vaqt: --:--</div>
-
         <div class="answer-note">
             Savol matnlari bu yerga kiritilmaydi.<br>
             Savollar Telegram kanalida bo‘ladi. Bu oynada faqat javoblar belgilanadi.
         </div>
-
         <div id="questionsContainer"></div>
-
         <button id="submitButton" class="primary" onclick="submitTest()">✅ Testni topshirish</button>
     </div>
 </div>
@@ -332,19 +273,9 @@ function apiHeaders(){
     };
 }
 
-function showHome(){
-    setSection("home");
-}
-
-function showResults(){
-    setSection("results");
-    loadResults();
-}
-
-function showProfile(){
-    setSection("profile");
-    loadProfile();
-}
+function showHome(){ setSection("home"); }
+function showResults(){ setSection("results"); loadResults(); }
+function showProfile(){ setSection("profile"); loadProfile(); }
 
 function setSection(name){
     document.getElementById("homeSection").classList.toggle("hidden", name !== "home");
@@ -365,27 +296,21 @@ function openStartModal(){
 }
 
 function openNameModal(){
-    document.getElementById("fullNameInput").value =
-        document.getElementById("profileName").textContent || "";
+    document.getElementById("fullNameInput").value = document.getElementById("profileName").textContent || "";
     hideMessage("nameMessage");
     document.getElementById("nameModal").classList.add("show");
 }
 
-function closeModal(id){
-    document.getElementById(id).classList.remove("show");
-}
-
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
 function showMessage(text){
     document.getElementById("messageText").textContent = text;
     document.getElementById("messageModal").classList.add("show");
 }
-
 function showInlineMessage(id,text,kind=""){
     const el = document.getElementById(id);
     el.textContent = text;
     el.className = "message " + kind;
 }
-
 function hideMessage(id){
     document.getElementById(id).className = "message hidden";
     document.getElementById(id).textContent = "";
@@ -412,33 +337,20 @@ async function checkTest(){
             method:"GET",
             headers:apiHeaders()
         });
-
         const data = await response.json();
 
         if(!response.ok || !data.success){
-            showInlineMessage(
-                "startMessage",
-                data.message || "❌ Test topilmadi.",
-                "danger"
-            );
+            showInlineMessage("startMessage", data.message || "❌ Test topilmadi.", "danger");
             return;
         }
 
         if(data.test?.already_submitted){
-            showInlineMessage(
-                "startMessage",
-                "⚠️ Siz bu testni allaqachon topshirgansiz.\n\nNatijani test yakunlangach Natijalarim bo‘limidan ko‘rasiz.",
-                "warning"
-            );
+            showInlineMessage("startMessage", "⚠️ Siz bu testni allaqachon topshirgansiz.", "warning");
             return;
         }
 
         if(data.status === "finished" || data.expired || data.test?.status === "finished"){
-            showInlineMessage(
-                "startMessage",
-                "🏁 Bu testning topshirish vaqti tugagan.\n\n⏳ Testga kirish mumkin emas.",
-                "warning"
-            );
+            showInlineMessage("startMessage", "🏁 Bu testning topshirish vaqti tugagan.", "warning");
             return;
         }
 
@@ -448,14 +360,9 @@ async function checkTest(){
         renderTest();
         document.getElementById("testModal").classList.add("show");
         startTimer(currentTest.ends_at);
-
     }catch(error){
         console.error(error);
-        showInlineMessage(
-            "startMessage",
-            "❌ Server bilan bog‘lanib bo‘lmadi.\n\nInternet yoki serverni tekshiring.",
-            "danger"
-        );
+        showInlineMessage("startMessage", "❌ Server bilan bog‘lanib bo‘lmadi.", "danger");
     }finally{
         button.disabled = false;
         button.textContent = "Testni tekshirish ➜";
@@ -468,14 +375,10 @@ function openAnswerModal(){
     startTimer(currentTest.ends_at);
 }
 
-function closeAnswerModal(){
-    document.getElementById("answerModal").classList.remove("show");
-}
+function closeAnswerModal(){ document.getElementById("answerModal").classList.remove("show"); }
 
 function renderTest(){
-    document.getElementById("testTitle").textContent =
-        "📝 Test: " + (currentTest.code || "");
-
+    document.getElementById("testTitle").textContent = "📝 Test: " + (currentTest.code || "");
     document.getElementById("testInfo").innerHTML =
         "📢 Kanal: <b>" + escapeHtml(currentTest.channel || "—") + "</b><br>" +
         "📚 Fan: <b>" + escapeHtml(currentTest.subject || "—") + "</b><br>" +
@@ -484,39 +387,18 @@ function renderTest(){
     const container = document.getElementById("questionsContainer");
     container.innerHTML = "";
 
-    /*
-       Testlar har doim 35 ta bo‘lmaydi.
-       Savollar soni test yaratilganda berilgan question_count dan olinadi.
-
-       Javob turi:
-       1–32  -> A/B/C/D
-       33–35 -> A/B/C/D/E/F
-       36+   -> aniq javob
-
-       Backend `questions` massivini yuborsa, uning type qiymati ustun hisoblanadi.
-       Agar yubormasa, question_count asosida avtomatik yaratiladi.
-    */
     const questionCount = Number(currentTest.question_count || 0);
-    let questions = Array.isArray(currentTest.questions)
-        ? currentTest.questions
-        : [];
+    let questions = Array.isArray(currentTest.questions) ? currentTest.questions : [];
 
     if (!questions.length && questionCount > 0) {
-        // Backend test yaratilganda saqlangan formatni qaytaradi.
-        // Eski testlar uchun dtm_45 standart formati saqlanadi.
         const answerFormat = currentTest.answer_format || "dtm_45";
         questions = Array.from({length: questionCount}, (_, i) => {
             const number = i + 1;
             let type = "multiple_choice_4";
-
             if (answerFormat === "dtm_45") {
-                if (number >= 33 && number <= 35) {
-                    type = "multiple_choice_6";
-                } else if (number >= 36 && number <= 45) {
-                    type = "double_exact";
-                } else if (number > 45) {
-                    type = "exact";
-                }
+                if (number >= 33 && number <= 35) type = "multiple_choice_6";
+                else if (number >= 36 && number <= 45) type = "double_exact";
+                else if (number > 45) type = "exact";
             }
             return { number, type };
         });
@@ -541,18 +423,26 @@ function renderTest(){
             const labelA = document.createElement("div");
             labelA.textContent = "a)";
             labelA.className = "dual-answer-label";
-            const inputA = createMathAnswerField("a) javob", pair[0] || "");
+            const inputA = document.createElement("input");
+            inputA.className = "exact-answer";
+            inputA.placeholder = "a) javob";
+            inputA.value = pair[0] || "";
 
             const labelB = document.createElement("div");
             labelB.textContent = "b)";
             labelB.className = "dual-answer-label";
-            const inputB = createMathAnswerField("b) javob", pair[1] || "");
+            const inputB = document.createElement("input");
+            inputB.className = "exact-answer";
+            inputB.placeholder = "b) javob";
+            inputB.value = pair[1] || "";
 
-            const savePair = ()=>{
-                answers[String(number)] = [inputA.value, inputB.value];
-            };
+            const savePair = ()=>{ answers[String(number)] = [inputA.value, inputB.value]; };
             inputA.addEventListener("input", savePair);
             inputB.addEventListener("input", savePair);
+            if (window.FormulaEditor) {
+                FormulaEditor.attach(inputA, currentTest.subject);
+                FormulaEditor.attach(inputB, currentTest.subject);
+            }
 
             const partA = document.createElement("div");
             partA.className = "dual-answer-part";
@@ -568,51 +458,41 @@ function renderTest(){
             wrap.appendChild(partB);
             wrapper.appendChild(wrap);
         }else if(q.type === "exact"){
-            const input = createMathAnswerField("Aniq javob", answers[String(number)] || "");
-            input.addEventListener("input",()=>{
-                answers[String(number)] = input.value;
-            });
+            const input = document.createElement("input");
+            input.className = "exact-answer";
+            input.placeholder = "Aniq javob";
+            input.value = answers[String(number)] || "";
+            input.addEventListener("input",()=>{ answers[String(number)] = input.value; });
+            if (window.FormulaEditor) FormulaEditor.attach(input, currentTest.subject);
             wrapper.appendChild(input);
         }else{
             const row = document.createElement("div");
             row.className = "answer-row";
-
-            const letters = q.type === "multiple_choice_6"
-                ? ["A","B","C","D","E","F"]
-                : ["A","B","C","D"];
+            const letters = q.type === "multiple_choice_6" ? ["A","B","C","D","E","F"] : ["A","B","C","D"];
 
             letters.forEach(letter=>{
                 const btn = document.createElement("button");
                 btn.className = "answer";
                 btn.textContent = letter;
-
-                if (answers[String(number)] === letter) {
-                    btn.classList.add("selected");
-                }
-
+                if (answers[String(number)] === letter) btn.classList.add("selected");
                 btn.onclick = ()=>{
                     answers[String(number)] = letter;
                     [...row.children].forEach(x=>x.classList.remove("selected"));
                     btn.classList.add("selected");
                 };
-
                 row.appendChild(btn);
             });
-
             wrapper.appendChild(row);
         }
-
         container.appendChild(wrapper);
     });
 }
 
 function startTimer(endsAt){
     clearInterval(timerInterval);
-
     function tick(){
         const end = new Date(endsAt).getTime();
         const diff = Math.max(0,end-Date.now());
-
         if(diff <= 0){
             document.getElementById("testTimer").textContent = "🏁 Vaqt tugadi!";
             document.getElementById("answerTimer").textContent = "🏁 Vaqt tugadi!";
@@ -620,37 +500,26 @@ function startTimer(endsAt){
             if(!submitting) submitTest(true);
             return;
         }
-
         const totalSeconds = Math.floor(diff/1000);
         const h = Math.floor(totalSeconds/3600);
         const m = Math.floor((totalSeconds%3600)/60);
         const s = totalSeconds%60;
-
-        const timerText =
-            "⏳ Qolgan vaqt: " +
-            (h ? String(h).padStart(2,"0")+":" : "") +
-            String(m).padStart(2,"0")+":" +
-            String(s).padStart(2,"0");
-
+        const timerText = "⏳ Qolgan vaqt: " + (h ? String(h).padStart(2,"0")+":" : "") + String(m).padStart(2,"0")+":" + String(s).padStart(2,"0");
         document.getElementById("testTimer").textContent = timerText;
         document.getElementById("answerTimer").textContent = timerText;
     }
-
     tick();
     timerInterval = setInterval(tick,1000);
 }
 
 async function submitTest(auto=false){
     if(submitting || !currentTest) return;
-
     const questionCount = Number(currentTest.question_count || 0);
     const missing = [];
 
     for(let i=1;i<=questionCount;i++){
         if(i >= 36 && i <= 45){
             const pair = answers[String(i)];
-            // a) va b) must be scored independently: one part may be blank/wrong,
-            // while the other correct part still receives its own point.
             if(!Array.isArray(pair) || (!String(pair[0] || "").trim() && !String(pair[1] || "").trim())) missing.push(i);
         }else if(!String(answers[String(i)] || "").trim()) {
             missing.push(i);
@@ -658,16 +527,12 @@ async function submitTest(auto=false){
     }
 
     if(missing.length && !auto){
-        showMessage(
-            "❗ Barcha savollarga javob bering.\n\n" +
-            "Javob berilmagan savollar: " + missing.join(", ")
-        );
+        showMessage("❗ Barcha savollarga javob bering.\n\nJavob berilmagan savollar: " + missing.join(", "));
         return;
     }
 
     submitting = true;
     clearInterval(timerInterval);
-
     const button = document.getElementById("submitButton");
     button.disabled = true;
     button.textContent = auto ? "⏳ Vaqt tugadi..." : "Yuborilmoqda...";
@@ -676,33 +541,18 @@ async function submitTest(auto=false){
         const response = await fetch(API_BASE + "/api/participant/submit",{
             method:"POST",
             headers:apiHeaders(),
-            body:JSON.stringify({
-                code: currentTest.code,
-                answers: answers,
-                auto_submit: auto
-            })
+            body:JSON.stringify({ code: currentTest.code, answers: answers, auto_submit: auto })
         });
-
         const data = await response.json();
-
         if(!response.ok || !data.success){
             showMessage(data.message || "❌ Javoblarni yuborishda xatolik.");
             return;
         }
-
         closeModal("testModal");
         closeAnswerModal();
-
-        showMessage(
-            "✅ Testni muvaffaqiyatli topshirdingiz!\n\n" +
-            "📊 Javoblaringiz qabul qilindi.\n" +
-            "⏳ Natijalarni kuting...\n\n" +
-            "Natijalar test yakunlangandan so‘ng barcha ishtirokchilar natijalari hisoblangach yuboriladi."
-        );
-
+        showMessage("✅ Testni muvaffaqiyatli topshirdingiz!");
         currentTest = null;
         answers = {};
-
     }catch(error){
         console.error(error);
         showMessage("❌ Server bilan bog‘lanib bo‘lmadi.");
@@ -714,187 +564,94 @@ async function submitTest(auto=false){
 }
 
 function closeTestWithoutSubmit(){
-    showMessage(
-        "⚠️ Test oynasi yopiladi.\n\n" +
-        "Javoblaringiz topshirilmaydi. Testni davom ettirish uchun oynani yopmang."
-    );
+    showMessage("⚠️ Test oynasi yopiladi.\n\nJavoblaringiz topshirilmaydi.");
 }
 
 async function loadResults(){
     const list = document.getElementById("resultsList");
     list.innerHTML = '<div class="message">⏳ Natijalar yuklanmoqda...</div>';
-
     try{
-        const response = await fetch(API_BASE + "/api/participant/results",{
-            method:"GET",
-            headers:apiHeaders()
-        });
+        const response = await fetch(API_BASE + "/api/participant/results",{ method:"GET", headers:apiHeaders() });
         const data = await response.json();
-
         if(!response.ok || !data.success){
-            list.innerHTML = '<div class="message danger">' +
-                escapeHtml(data.message || "Natijalarni olishda xatolik.") +
-                '</div>';
+            list.innerHTML = '<div class="message danger">' + escapeHtml(data.message || "Xatolik") + '</div>';
             return;
         }
-
         const results = data.results || [];
-
         if(!results.length){
             list.innerHTML = '<div class="message">📭 Hozircha topshirilgan testlar yo‘q.</div>';
             return;
         }
-
         list.innerHTML = "";
         results.forEach(item=>{
             const div = document.createElement("div");
             div.className = "result-item";
-
             const grade = item.grade || "NC";
             div.innerHTML =
-                '<div class="result-top">' +
-                '<b>📝 Test: ' + escapeHtml(item.test_code || item.code || "—") + '</b>' +
-                '<span class="grade">' + escapeHtml(grade) + '</span>' +
-                '</div>' +
-                '<div class="small" style="margin-top:6px">' +
-                '📚 Fan: <b>' + escapeHtml(item.subject || "—") + '</b>' +
-                (item.status === "finished" ? ' &nbsp; ✅ To‘g‘ri: <b>' + escapeHtml(String(item.correct_count ?? 0)) + '/' + escapeHtml(String(item.answer_unit_count ?? item.question_count ?? 0)) + '</b>' : '') +
-                '</div>' +
-                '<div class="small" style="margin-top:8px">' +
-                '📈 Natija: <b>' + escapeHtml(String(item.percent ?? "—")) + '%</b>' +
-                ' &nbsp; ⭐ Ball: <b>' + escapeHtml(String(item.score ?? "—")) + '</b>' +
-                '</div>' +
-                '<div class="small" style="margin-top:5px">' +
-                '📅 ' + escapeHtml(item.submitted_at || "—") +
-                '</div>' +
-                (item.status === "finished" && item.rank ?
-                    '<div class="small" style="margin-top:5px">🥇 Reyting: <b>' + escapeHtml(String(item.rank)) + '-o‘rin</b>' +
-                    (item.total_participants ? ' / ' + escapeHtml(String(item.total_participants)) + ' ta' : '') +
-                    '</div>' : '');
-
+                '<div class="result-top"><b>📝 Test: ' + escapeHtml(item.test_code || item.code || "—") + '</b><span class="grade">' + escapeHtml(grade) + '</span></div>' +
+                '<div class="small" style="margin-top:6px">📚 Fan: <b>' + escapeHtml(item.subject || "—") + '</b></div>' +
+                '<div class="small" style="margin-top:8px">📈 Natija: <b>' + escapeHtml(String(item.percent ?? "—")) + '%</b> &nbsp; ⭐ Ball: <b>' + escapeHtml(String(item.score ?? "—")) + '</b></div>' +
+                '<div class="small" style="margin-top:5px">📅 ' + escapeHtml(item.submitted_at || "—") + '</div>';
             list.appendChild(div);
         });
-
     }catch(error){
-        console.error(error);
         list.innerHTML = '<div class="message danger">❌ Server bilan bog‘lanib bo‘lmadi.</div>';
     }
 }
 
 async function loadProfile(){
     const fallback = tgUser;
-
     if(fallback){
         document.getElementById("profileTelegramId").textContent = fallback.id || "—";
-        document.getElementById("profileUsername").textContent =
-            fallback.username ? "@" + fallback.username : "Username mavjud emas";
+        document.getElementById("profileUsername").textContent = fallback.username ? "@" + fallback.username : "Username mavjud emas";
     }
-
     try{
-        const response = await fetch(API_BASE + "/api/participant/profile",{
-            method:"GET",
-            headers:apiHeaders()
-        });
+        const response = await fetch(API_BASE + "/api/participant/profile",{ method:"GET", headers:apiHeaders() });
         const data = await response.json();
-
-        if(!response.ok || !data.success){
-            throw new Error(data.message || "Profile error");
-        }
-
+        if(!response.ok || !data.success) throw new Error("Profile error");
         const profile = data.profile || data;
         const name = String(profile.full_name || "").trim() || "Ism-familiya kiritilmagan";
-
         document.getElementById("profileName").textContent = name;
         document.getElementById("profileAvatar").textContent = getInitials(name);
         document.getElementById("profileTelegramId").textContent = profile.telegram_id || (fallback?.id || "—");
-        document.getElementById("profileUsername").textContent =
-            profile.username ? "@" + profile.username : "Username mavjud emas";
-
-        document.getElementById("welcomeText").textContent =
-            "👋 Assalomu alaykum, " + name + "!";
-
+        document.getElementById("profileUsername").textContent = profile.username ? "@" + profile.username : "Username mavjud emas";
+        document.getElementById("welcomeText").textContent = "👋 Assalomu alaykum, " + name + "!";
     }catch(error){
-        console.error(error);
         document.getElementById("profileName").textContent = "Ism-familiya kiritilmagan";
-        document.getElementById("profileAvatar").textContent = "?";
-        document.getElementById("welcomeText").textContent = "👋 Assalomu alaykum!";
     }
 }
 
 async function saveName(){
     const name = document.getElementById("fullNameInput").value.trim();
-
-    if(name.length < 3){
-        showInlineMessage("nameMessage","❗ Ism-familiya kiriting.","danger");
-        return;
-    }
-
+    if(name.length < 3){ showInlineMessage("nameMessage","❗ Ism-familiya kiriting.","danger"); return; }
     try{
         const response = await fetch(API_BASE + "/api/participant/profile",{
-            method:"POST",
-            headers:apiHeaders(),
-            body:JSON.stringify({full_name:name})
+            method:"POST", headers:apiHeaders(), body:JSON.stringify({full_name:name})
         });
-
         const data = await response.json();
-
-        if(!response.ok || !data.success){
-            showInlineMessage("nameMessage",data.message || "❌ Saqlashda xatolik.","danger");
-            return;
-        }
-
+        if(!response.ok || !data.success){ showInlineMessage("nameMessage",data.message || "❌ Xatolik.","danger"); return; }
         document.getElementById("profileName").textContent = name;
         document.getElementById("profileAvatar").textContent = getInitials(name);
-        document.getElementById("welcomeText").textContent =
-            "👋 Assalomu alaykum, " + name + "!";
-
+        document.getElementById("welcomeText").textContent = "👋 Assalomu alaykum, " + name + "!";
         closeModal("nameModal");
-        showMessage("✅ Ism-familiyangiz muvaffaqiyatli saqlandi.");
-
+        showMessage("✅ Saqlandi.");
     }catch(error){
-        console.error(error);
         showInlineMessage("nameMessage","❌ Server bilan bog‘lanib bo‘lmadi.","danger");
     }
 }
 
-function getInitials(name){
-    return String(name).trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase() || "U";
-}
+function getInitials(name){ return String(name).trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase() || "U"; }
+function escapeHtml(text){ return String(text).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
 
-function escapeHtml(text){
-    return String(text)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-}
-
-/* Copy/drag/context-menu protection.
-   Form inputs remain usable. */
-document.addEventListener("contextmenu",e=>{
-    if(!["INPUT","TEXTAREA"].includes(e.target.tagName)) e.preventDefault();
-});
-document.addEventListener("selectstart",e=>{
-    if(!["INPUT","TEXTAREA"].includes(e.target.tagName)) e.preventDefault();
-});
+document.addEventListener("contextmenu",e=>{ if(!["INPUT","TEXTAREA"].includes(e.target.tagName)) e.preventDefault(); });
+document.addEventListener("selectstart",e=>{ if(!["INPUT","TEXTAREA"].includes(e.target.tagName)) e.preventDefault(); });
 document.addEventListener("dragstart",e=>e.preventDefault());
-document.addEventListener("copy",e=>{
-    if(!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)) e.preventDefault();
-});
-document.addEventListener("cut",e=>{
-    if(!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)) e.preventDefault();
-});
 
-/* Modal tashqarisiga bosilganda yopish */
 ["startModal","nameModal","messageModal"].forEach(id=>{
-    document.getElementById(id).addEventListener("click",e=>{
-        if(e.target === e.currentTarget) closeModal(id);
-    });
+    document.getElementById(id).addEventListener("click",e=>{ if(e.target === e.currentTarget) closeModal(id); });
 });
 
 loadProfile();
 </script>
-
 </body>
 </html>
