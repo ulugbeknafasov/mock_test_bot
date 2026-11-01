@@ -160,6 +160,7 @@ def init_test_tables():
             duration_minutes INTEGER NOT NULL,
             question_count INTEGER NOT NULL,
             subject TEXT NOT NULL DEFAULT 'matematika',
+            answer_format TEXT NOT NULL DEFAULT 'dtm_45',
             answer_key_json TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             ends_at TIMESTAMP NOT NULL,
@@ -181,15 +182,32 @@ def init_test_tables():
     columns = {row["name"] for row in cursor.fetchall()}
     if "subject" not in columns:
         cursor.execute("ALTER TABLE mock_tests ADD COLUMN subject TEXT NOT NULL DEFAULT 'matematika'")
+    if "answer_format" not in columns:
+        cursor.execute("ALTER TABLE mock_tests ADD COLUMN answer_format TEXT NOT NULL DEFAULT 'dtm_45'")
+
+    # Test kodlari katta-kichik harf farqisiz yagona bo‘lsin.
+    # Eski bazada case-insensitive takrorlar bo‘lsa, index yaratish xatosi
+    # ma'lumotlarni o‘chirmaydi; logda ko‘rinadi va API tekshiruvi ishlashda davom etadi.
+    try:
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_mock_tests_code_upper
+            ON mock_tests(UPPER(code))
+        """)
+    except sqlite3.IntegrityError as error:
+        print("WARNING: eski bazada takroriy test kodlari bor; unique index yaratilmadi:", error)
 
     connection.commit()
     connection.close()
 
 init_test_tables()
 
-def create_mock_test(creator_id, code, channel, duration, question_count, subject, answer_key):
+def create_mock_test(creator_id, code, channel, duration, question_count, subject, answer_format, answer_key):
     connection = get_connection()
     cursor = connection.cursor()
+
+    # Tekshiruv va INSERT bir tranzaksiyada: parallel so‘rovlar bir xil kodni
+    # bir vaqtda egallab ololmaydi (unique index bilan qo‘shimcha himoya ham bor).
+    cursor.execute("BEGIN IMMEDIATE")
 
     cursor.execute(
         "SELECT id FROM mock_tests WHERE UPPER(code) = ?",
@@ -206,9 +224,9 @@ def create_mock_test(creator_id, code, channel, duration, question_count, subjec
         cursor.execute("""
             INSERT INTO mock_tests (
                 creator_id, code, channel, duration_minutes,
-                question_count, subject, answer_key_json, created_at, ends_at, status
+                question_count, subject, answer_format, answer_key_json, created_at, ends_at, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         """, (
             creator_id,
             code,
@@ -216,6 +234,7 @@ def create_mock_test(creator_id, code, channel, duration, question_count, subjec
             duration,
             question_count,
             subject,
+            answer_format,
             json.dumps(answer_key, ensure_ascii=False),
             created_at.isoformat(),
             ends_at.isoformat()
@@ -420,6 +439,33 @@ def pro_payment_paid():
     return jsonify({"success": True, "message": "Chek yuborish haqida xabar bot chatiga yuborildi."})
 
 
+@app.route("/api/check-test-code", methods=["GET"])
+def check_test_code():
+    telegram_id = get_telegram_user_id()
+    if not telegram_id:
+        return jsonify({"success": False, "message": "Telegram foydalanuvchisi aniqlanmadi."}), 401
+
+    code = str(request.args.get("code", "")).strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]{4,10}", code):
+        return jsonify({
+            "success": False,
+            "available": False,
+            "message": "Kod 4–10 ta A–Z harfi yoki 0–9 raqamidan iborat bo‘lishi kerak."
+        }), 400
+
+    connection = get_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT 1 FROM mock_tests WHERE UPPER(code) = ? LIMIT 1", (code,))
+    exists = cursor.fetchone() is not None
+    connection.close()
+
+    return jsonify({
+        "success": True,
+        "available": not exists,
+        "message": "Bu kod band. Boshqa kod kiriting." if exists else "Kod bo‘sh."
+    })
+
+
 @app.route("/api/create-test", methods=["POST"])
 def create_test():
     telegram_id = get_telegram_user_id()
@@ -439,6 +485,7 @@ def create_test():
         code = str(body.get("code", "")).strip().upper()
         channel = str(body.get("channel", "")).strip()
         subject = str(body.get("subject", "")).strip().lower()
+        answer_format = str(body.get("answer_format", "dtm_45")).strip().lower()
         duration = int(body.get("duration"))
 
         if not re.fullmatch(r"[A-Z0-9]{4,10}", code):
@@ -451,6 +498,8 @@ def create_test():
         allowed_subjects = {"matematika", "fizika", "kimyo", "biologiya"}
         if subject not in allowed_subjects:
             return jsonify({"success": False, "message": "Fanni tanlang."}), 400
+        if answer_format != "dtm_45":
+            return jsonify({"success": False, "message": "Javob formati noto‘g‘ri."}), 400
 
         if len(code) < 4 or len(code) > 10:
             return jsonify({
@@ -492,6 +541,7 @@ def create_test():
             duration,
             question_count,
             subject,
+            answer_format,
             answer_key
         )
 
@@ -538,6 +588,7 @@ def create_test():
             "code": code,
             "channel": channel,
             "subject": subject,
+            "answer_format": answer_format,
             "duration": duration,
             "question_count": question_count,
             "ends_at": test["ends_at"]
@@ -1233,6 +1284,7 @@ def participant_test(code):
             "code": test["code"],
             "channel": test["channel"],
             "subject": (test["subject"] if "subject" in test.keys() else "matematika"),
+            "answer_format": (test["answer_format"] if "answer_format" in test.keys() else "dtm_45"),
             "duration_minutes": int(test["duration_minutes"]),
             "question_count": int(test["question_count"]),
             "created_at": test["created_at"],
