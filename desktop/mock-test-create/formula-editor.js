@@ -1121,8 +1121,9 @@
         unicodeEditor.hidden = true;
         mathEditor.hidden = false;
 
-        mathEditor.mathVirtualKeyboardPolicy = "manual";
         mathEditor.setAttribute("inputmode", "none");
+        mathEditor.setAttribute("virtual-keyboard-mode", "manual");
+        mathEditor.mathVirtualKeyboardPolicy = "manual";
 
         // Agar oldindan vizual elementda qiymat bo'lsa shuni o'qiymiz, yo'qsa inputdan
         let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
