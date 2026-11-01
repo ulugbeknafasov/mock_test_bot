@@ -1080,171 +1080,219 @@
   // 14. OCHISH
   // =========================================
 
-  async function open(target, subject) {
-    if (!target) return;
+async function open(target, subject) {
+  if (!target) return;
 
-    activeTarget = target;
+  activeTarget = target;
+  const currentTarget = target;
 
-    const currentTarget = target;
+  const key = String(subject || "matematika")
+    .toLowerCase()
+    .trim();
 
-    const key = String(subject || "matematika")
-      .toLowerCase()
-      .trim();
+  activeSubject = BANKS[key] ? key : "matematika";
 
-    activeSubject = BANKS[key] ? key : "matematika";
+  ensureModal();
 
-    ensureModal();
+  const titles = {
+    matematika: "Matematika — Formula muharriri",
+    fizika: "Fizika — Formula muharriri",
+    kimyo: "Kimyo — maxsus klaviatura",
+    biologiya: "Biologiya — maxsus klaviatura"
+  };
 
-    const titles = {
-      matematika: "Matematika — Formula muharriri",
-      fizika: "Fizika — Formula muharriri",
-      kimyo: "Kimyo — maxsus klaviatura",
-      biologiya: "Biologiya — maxsus klaviatura"
-    };
+  modal.querySelector("#fm-title").textContent =
+    titles[activeSubject];
 
-    modal.querySelector("#fm-title").textContent =
-      titles[activeSubject];
+  modal.hidden = false;
 
-    modal.hidden = false;
+  if (IS_MATH()) {
+    try {
+      await loadMathLive();
 
-    if (IS_MATH()) {
-      try {
-        await loadMathLive();
-
-        if (
-          !activeTarget ||
-          activeTarget !== currentTarget
-        ) {
-          return;
-        }
-
-        unicodeEditor.hidden = true;
-        mathEditor.hidden = false;
-
-        mathEditor.mathVirtualKeyboardPolicy = "manual";
-        mathEditor.setAttribute("inputmode", "none");
-
-        // Agar oldindan vizual elementda qiymat bo'lsa shuni o'qiymiz, yo'qsa inputdan
-        let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
-        mathEditor.value = visualField ? visualField.value : (target.value || "");
-
-        if (!mathEditor.dataset.keyboardConfigured) {
-          mathEditor.addEventListener("focus", () => {
-            if (window.mathVirtualKeyboard) {
-              window.mathVirtualKeyboard.layouts = [
-                "numeric",
-                "alphabetic",
-                "symbols",
-                "greek"
-              ];
-
-              window.mathVirtualKeyboard.show();
-            }
-          });
-
-          mathEditor.dataset.keyboardConfigured = "1";
-        }
-
-        renderBank();
-        mathEditor.focus();
-
-      } catch (error) {
-        console.error("MathLive xatosi:", error);
-
-        alert(
-          "Matematik muharrir yuklanmadi. Internetni tekshiring."
-        );
-
-        close();
+      if (
+        !activeTarget ||
+        activeTarget !== currentTarget ||
+        modal.hidden
+      ) {
+        return;
       }
 
-    } else {
-      mathEditor.hidden = true;
-      unicodeEditor.hidden = false;
+      unicodeEditor.hidden = true;
+      mathEditor.hidden = false;
 
-      // Kimyo va biologiyada telefon klaviaturasini cheklash
-      unicodeEditor.setAttribute("inputmode", "none");
-      unicodeEditor.setAttribute("autocomplete", "off");
-      unicodeEditor.setAttribute("autocorrect", "off");
-      unicodeEditor.setAttribute("autocapitalize", "off");
-      unicodeEditor.setAttribute("spellcheck", "false");
+      // Android oddiy klaviaturasini cheklash
+      mathEditor.setAttribute("inputmode", "none");
+      mathEditor.setAttribute("virtual-keyboard-mode", "manual");
+      mathEditor.mathVirtualKeyboardPolicy = "manual";
 
-      unicodeEditor.value = target.value || "";
+      // Avvalgi formulani olish
+      const visualField =
+        currentTarget.parentNode.querySelector(
+          ".fm-replaced-math-view"
+        );
+
+      mathEditor.value = visualField
+        ? visualField.value
+        : (currentTarget.value || "");
+
+      // MathLive klaviaturasini sozlash
+      if (!mathEditor.dataset.keyboardConfigured) {
+        mathEditor.addEventListener("focus", () => {
+          if (window.mathVirtualKeyboard) {
+            window.mathVirtualKeyboard.layouts = [
+              "numeric",
+              "alphabetic",
+              "symbols",
+              "greek"
+            ];
+
+            window.mathVirtualKeyboard.show();
+          }
+        });
+
+        mathEditor.dataset.keyboardConfigured = "1";
+      }
 
       renderBank();
-      unicodeEditor.focus();
+
+      // Fokusni modal to'liq ochilgandan keyin berish
+      requestAnimationFrame(() => {
+        if (
+          !modal.hidden &&
+          activeTarget === currentTarget
+        ) {
+          mathEditor.setAttribute("inputmode", "none");
+          mathEditor.mathVirtualKeyboardPolicy = "manual";
+
+          mathEditor.focus({ preventScroll: true });
+
+          if (window.mathVirtualKeyboard) {
+            window.mathVirtualKeyboard.layouts = [
+              "numeric",
+              "alphabetic",
+              "symbols",
+              "greek"
+            ];
+
+            window.mathVirtualKeyboard.show();
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error("MathLive xatosi:", error);
+
+      alert(
+        "Matematik muharrir yuklanmadi. Internetni tekshiring."
+      );
+
+      close();
     }
+
+  } else {
+    mathEditor.hidden = true;
+    unicodeEditor.hidden = false;
+
+    unicodeEditor.setAttribute("inputmode", "none");
+    unicodeEditor.setAttribute("autocomplete", "off");
+    unicodeEditor.setAttribute("autocorrect", "off");
+    unicodeEditor.setAttribute("autocapitalize", "off");
+    unicodeEditor.setAttribute("spellcheck", "false");
+
+    unicodeEditor.value = currentTarget.value || "";
+
+    renderBank();
+    unicodeEditor.focus();
   }
+}
 
   // =========================================
   // 15. SAQLASH (FAQAT VIZUAL KO'RINISH QOLADIGAN QILIB YANGILANDI)
   // =========================================
 
-  function save() {
-    if (!activeTarget) {
-      close();
-      return;
-    }
-
-    if (IS_MATH()) {
-      const val = mathEditor.value; // Masalan: \sqrt[2]{3}
-      
-      // 1. Asl inputga qiymatni yozib qo'yamiz (bazaga ketishi uchun)
-      activeTarget.value = val;
-
-      // 2. Asl inputning o'rnida faqat chiroyli matematik ko'rinishni chiqaramiz
-      let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
-      if (!visualField) {
-        visualField = document.createElement("math-field");
-        visualField.className = "fm-replaced-math-view";
-        visualField.setAttribute("read-only", "");
-        visualField.style.cssText = `
-          display: inline-flex;
-          align-items: center;
-          width: 100%;
-          min-height: 44px;
-          background: #fff;
-          color: #111827;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          padding: 6px 12px;
-          font-size: 20px;
-          cursor: pointer;
-          box-sizing: border-box;
-          margin-bottom: 8px;
-        `;
-
-        // Vizual element bosilganda tahrirlash oynasi qayta ochiladi
-        visualField.addEventListener("click", () => {
-          open(activeTarget, activeSubject);
-        });
-
-        // Asl inputni yashirib, o'rniga vizual elementni qo'shamiz
-        activeTarget.style.display = "none";
-        activeTarget.insertAdjacentElement("afterend", visualField);
-      }
-
-      visualField.value = val;
-      visualField.style.display = "block";
-
-    } else {
-      activeTarget.value = unicodeEditor.value;
-    }
-
-    activeTarget.dispatchEvent(
-      new Event("input", {
-        bubbles: true
-      })
-    );
-
-    activeTarget.dispatchEvent(
-      new Event("change", {
-        bubbles: true
-      })
-    );
-
+function save() {
+  if (!activeTarget) {
     close();
+    return;
   }
+
+  const savedTarget = activeTarget;
+  const savedSubject = activeSubject;
+
+  if (IS_MATH()) {
+    const val = mathEditor.value;
+
+    // Formulani asl inputga saqlash
+    savedTarget.value = val;
+
+    // Vizual matematik maydonni topish
+    let visualField =
+      savedTarget.parentNode.querySelector(
+        ".fm-replaced-math-view"
+      );
+
+    if (!visualField) {
+      visualField = document.createElement("math-field");
+
+      visualField.className = "fm-replaced-math-view";
+      visualField.setAttribute("read-only", "");
+
+      visualField.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        width: 100%;
+        min-height: 44px;
+        background: #fff;
+        color: #111827;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 20px;
+        cursor: pointer;
+        box-sizing: border-box;
+        margin-bottom: 8px;
+      `;
+
+      // Aynan o'z inputini qayta ochish
+      visualField.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        open(savedTarget, savedSubject);
+      });
+
+      savedTarget.insertAdjacentElement(
+        "afterend",
+        visualField
+      );
+    }
+
+    visualField.value = val;
+    visualField.style.display = "block";
+
+    // Asl input yashiriladi, lekin qiymati saqlanadi
+    savedTarget.style.display = "none";
+
+  } else {
+    savedTarget.value = unicodeEditor.value;
+  }
+
+  // Javobni botga uzatish
+  savedTarget.dispatchEvent(
+    new Event("input", {
+      bubbles: true
+    })
+  );
+
+  savedTarget.dispatchEvent(
+    new Event("change", {
+      bubbles: true
+    })
+  );
+
+  close();
+}
 
   // =========================================
   // 16. YOPISH
