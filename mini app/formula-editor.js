@@ -1,153 +1,193 @@
+
 (function () {
   "use strict";
 
-  const ELEMENTS = [
-    ["H","Vodorod"],["He","Geliy"],["Li","Litiy"],["Be","Berilliy"],
-    ["B","Bor"],["C","Uglerod"],["N","Azot"],["O","Kislorod"],
-    ["F","Ftor"],["Ne","Neon"],["Na","Natriy"],["Mg","Magniy"],
-    ["Al","Alyuminiy"],["Si","Kremniy"],["P","Fosfor"],["S","Oltingugurt"],
-    ["Cl","Xlor"],["Ar","Argon"],["K","Kaliy"],["Ca","Kalsiy"],
-    ["Sc","Skandiy"],["Ti","Titan"],["V","Vanadiy"],["Cr","Xrom"],
-    ["Mn","Marganes"],["Fe","Temir"],["Co","Kobalt"],["Ni","Nikel"],
-    ["Cu","Mis"],["Zn","Rux"],["Ga","Galliy"],["Ge","Germaniy"],
-    ["As","Mishyak"],["Se","Selen"],["Br","Brom"],["Kr","Kripton"],
-    ["Rb","Rubidiy"],["Sr","Stronsiy"],["Y","Itriy"],["Zr","Sirkoniy"],
-    ["Nb","Niobiy"],["Mo","Molibden"],["Tc","Texnetsiy"],["Ru","Ruteniy"],
-    ["Rh","Rodiy"],["Pd","Palladiy"],["Ag","Kumush"],["Cd","Kadmiy"],
-    ["In","Indiy"],["Sn","Qalay"],["Sb","Surma"],["Te","Tellur"],
-    ["I","Yod"],["Xe","Ksenon"],["Cs","Seziy"],["Ba","Bariy"],
-    ["La","Lantan"],["Ce","Seriy"],["Pr","Prazeodim"],["Nd","Neodim"],
-    ["Pm","Prometiy"],["Sm","Samariy"],["Eu","Yevropiy"],["Gd","Gadoliniy"],
-    ["Tb","Terbiy"],["Dy","Disprosiy"],["Ho","Golmiy"],["Er","Erbiy"],
-    ["Tm","Tuliy"],["Yb","Itterbiy"],["Lu","Lyutetsiy"],["Hf","Gafniy"],
-    ["Ta","Tantal"],["W","Volfram"],["Re","Reniy"],["Os","Osmiy"],
-    ["Ir","Iridiy"],["Pt","Platina"],["Au","Oltin"],["Hg","Simob"],
-    ["Tl","Talliy"],["Pb","Qo‘rg‘oshin"],["Bi","Vismut"],["Po","Poloniy"],
-    ["At","Astat"],["Rn","Radon"],["Fr","Fransiy"],["Ra","Radiy"],
-    ["Ac","Aktiniy"],["Th","Toriy"],["Pa","Protaktiniy"],["U","Uran"],
-    ["Np","Neptuniy"],["Pu","Plutoniy"],["Am","Ameritsiy"],["Cm","Kyuriy"],
-    ["Bk","Berkliy"],["Cf","Kaliforniy"],["Es","Eynshteyniy"],["Fm","Fermiy"],
-    ["Md","Mendeleviy"],["No","Nobeliy"],["Lr","Lourensiy"],["Rf","Rezerfordiy"],
-    ["Db","Dubniy"],["Sg","Seaborgiy"],["Bh","Boriy"],["Hs","Hassiy"],
-    ["Mt","Meytneriy"],["Ds","Darmshtadtiy"],["Rg","Rentgeniy"],["Cn","Kopernitsiy"],
-    ["Nh","Nihoniy"],["Fl","Fleroviy"],["Mc","Moskoviy"],["Lv","Livermoriy"],
-    ["Ts","Tennessin"],["Og","Oganesson"]
-  ];
-
-  const INDEX_POWER_TOOLS = [
-    ...["⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹","⁺","⁻"].map(value => ({label:value,value})),
-    ...["₀","₁","₂","₃","₄","₅","₆","₇","₈","₉"].map(value => ({label:value,value})),
-    ...["²⁺","²⁻","³⁺","³⁻"].map(value => ({label:value,value}))
-  ];
-
-  const MATH_PHYSICS_CALCULATOR = [
-    {label:"∑",value:"\\sum"},{label:"∫",value:"\\int"},{label:"∬",value:"\\iint"},{label:"f(x)",value:"f(x)"},
-    {label:"ⁿPᵣ",value:"^{n}P_{r}"},{label:"ⁿCᵣ",value:"^{n}C_{r}"},{label:"π",value:"\\pi"},{label:"i",value:"i"},
-    {label:"°",value:"^{\\circ}"},{label:"θ",value:"\\theta"},{label:"e",value:"e"},{label:"α",value:"\\alpha"},
-    {label:"μ",value:"\\mu"},{label:"σ",value:"\\sigma"},{label:"[M]",value:"\\begin{matrix} & \\\\ & \\end{matrix}"},{label:"d/dx",value:"\\frac{d}{dx}"},
-    {label:"lim",value:"\\lim_{x\\to 0}"},{label:"∞",value:"\\infty"},{label:"ln",value:"\\ln("},{label:"!",value:"!"},
-    {label:"x̄",value:"\\bar{x}"},{label:"log₂",value:"\\log_2("},{label:"logₙ",value:"\\log_n("},{label:"xⁿ",value:"^{ }"},
-    {label:"sin",value:"\\sin("},{label:"cos",value:"\\cos("},{label:"tan",value:"\\tan("},{label:"cot",value:"\\cot("},
-    {label:"csc",value:"\\csc("},{label:"sec",value:"\\sec("},{label:"xʸ",value:"^{ }"},{label:"eˣ",value:"e^{ }"},
-    {label:"sin⁻¹",value:"\\arcsin("},{label:"cos⁻¹",value:"\\arccos("},{label:"tan⁻¹",value:"\\arctan("},{label:"Δ",value:"\\Delta"},
-    {label:"√",value:"\\sqrt{}"},{label:"∛",value:"\\sqrt[3]{}"},{label:"10ˣ",value:"10^{ }"},{label:"x³",value:"^{3}"},
-    {label:"(",value:"("},{label:")",value:")"},{label:"[",value:"["},{label:"]",value:"]"},
-    {label:"|",value:"|"},{label:"≤",value:"\\leq"},{label:"≥",value:"\\geq"},{label:"=",value:"="},
-    {label:"x",value:"x"},{label:"7",value:"7"},{label:"8",value:"8"},{label:"9",value:"9"},
-    {label:"÷",value:"\\div"},{label:"^",value:"^"},{label:"×",value:"\\times"},{label:"<",value:"<"},
-    {label:"y",value:"y"},{label:"4",value:"4"},{label:"5",value:"5"},{label:"6",value:"6"},
-    {label:"-",value:"-"},{label:"+",value:"+"},{label:"/",value:"/"},{label:">",value:">"},
-    {label:"z",value:"z"},{label:"1",value:"1"},{label:"2",value:"2"},{label:"3",value:"3"},
-    {label:",",value:","},{label:"0",value:"0"},{label:".",value:"."},{label:"%",value:"\\%"}
-  ];
-
-  const EXTRA_MATH_PHYSICS_SYMBOLS = [
-    {label:"≠",value:"\\neq"},{label:"≈",value:"\\approx"},{label:"≡",value:"\\equiv"},{label:"±",value:"\\pm"},
-    {label:"∓",value:"\\mp"},{label:"∈",value:"\\in"},{label:"∉",value:"\\notin"},{label:"⊂",value:"\\subset"},
-    {label:"⊆",value:"\\subseteq"},{label:"∪",value:"\\cup"},{label:"∩",value:"\\cap"},{label:"∅",value:"\\emptyset"},
-    {label:"∀",value:"\\forall"},{label:"∃",value:"\\exists"},{label:"⇒",value:"\\Rightarrow"},{label:"⇔",value:"\\Leftrightarrow"},
-    {label:"⊥",value:"\\perp"},{label:"∥",value:"\\parallel"},{label:"∠",value:"\\angle"},{label:"∇",value:"\\nabla"},
-    {label:"∂",value:"\\partial"},{label:"ℏ",value:"\\hbar"},{label:"ω",value:"\\omega"},{label:"λ",value:"\\lambda"},
-    {label:"ρ",value:"\\rho"},{label:"ε",value:"\\varepsilon"},{label:"Ω",value:"\\Omega"},{label:"γ",value:"\\gamma"}
-  ];
-
-  const CHEMISTRY_SYMBOLS = [
-    {label:"→",value:" → "},{label:"⇌",value:" ⇌ "},{label:"↑",value:"↑"},
-    {label:"↓",value:"↓"},{label:"Δ",value:"Δ"},{label:"°",value:"°"},
-    {label:"·",value:"·"},{label:"±",value:"±"},{label:"=",value:"="},
-    {label:"+",value:" + "},{label:"−",value:" − "},{label:"(s)",value:"(s)"},
-    {label:"(l)",value:"(l)"},{label:"(g)",value:"(g)"},{label:"(aq)",value:"(aq)"},
-    {label:"e⁻",value:"e⁻"},{label:"hν",value:"hν"},{label:"t°",value:"t°"}
-  ];
-
-  const CHEMISTRY_IONS = [
-    "H⁺","OH⁻","Na⁺","K⁺","Ag⁺","Ca²⁺","Mg²⁺",
-    "Ba²⁺","Zn²⁺","Cu²⁺","Fe²⁺","Fe³⁺","Al³⁺",
-    "Cl⁻","Br⁻","I⁻","NO₃⁻","SO₄²⁻","SO₃²⁻",
-    "CO₃²⁻","HCO₃⁻","PO₄³⁻","NH₄⁺","MnO₄⁻","Cr₂O₇²⁻"
-  ];
-
-  const BIOLOGY_SYMBOLS = [
-    "♀","♂","×","F₁","F₂","P","DNA","RNA","mRNA","tRNA",
-    "ATP","ADP","NAD","NADH","O₂","CO₂","H₂O",
-    "α","β","γ","Δ","→","↔","↑","↓",
-    "Aa","AA","aa","Xᴬ","Xᵃ","Y","XX","XY"
-  ];
-
-  const ELEMENT_BANK = ELEMENTS.map(item => ({
-    type:"element", symbol:item[0], name:item[1], value:item[0]
-  }));
-
-  const BANKS = {
-    matematika: {
-      "Kalkulyator paneli": MATH_PHYSICS_CALCULATOR,
-      "Matematik va fizik belgilar": EXTRA_MATH_PHYSICS_SYMBOLS
-    },
-    fizika: {
-      "Kalkulyator paneli": MATH_PHYSICS_CALCULATOR,
-      "Matematik va fizik belgilar": EXTRA_MATH_PHYSICS_SYMBOLS
-    },
-    kimyo: {
-      "Yuqori indeks va zaryad": INDEX_POWER_TOOLS,
-      "Reaksiya va amallar": CHEMISTRY_SYMBOLS,
-      "Ionlar": CHEMISTRY_IONS,
-      "Elementlar": ELEMENT_BANK
-    },
-    biologiya: {
-      "Yuqori indeks va pastki indeks": INDEX_POWER_TOOLS,
-      "Biologik belgilar": BIOLOGY_SYMBOLS,
-      "Elementlar": ELEMENT_BANK
-    }
-  };
+  // =========================================
+  // 1. BOT BILAN ULANISH
+  // =========================================
 
   let activeTarget = null;
   let activeSubject = "matematika";
   let modal = null;
-  let mathfield = null;
-  let scriptPromise = null;
+  let editor = null;
 
-  function loadMathLive() {
-    if (customElements.get("math-field")) return Promise.resolve();
-    if (scriptPromise) return scriptPromise;
+  // =========================================
+  // 2. RAQAMLAR — BARCHASIDA 1-BO'LIM
+  // =========================================
 
-    scriptPromise = new Promise((resolve, reject) => {
-      const existing = document.querySelector('script[src*="mathlive"]');
-      const script = existing || document.createElement("script");
+  const NUMBERS = [
+    ..."0123456789".split("").map(x => ({
+      label: x, value: x
+    }))
+  ];
 
-      script.addEventListener("load", () => resolve(), {once:true});
-      script.addEventListener("error", () => reject(new Error("Formula kutubxonasi yuklanmadi.")), {once:true});
+  // =========================================
+  // 3. MATEMATIKA VA FIZIKA
+  // =========================================
 
-      if (!existing) {
-        script.src = "https://cdn.jsdelivr.net/npm/mathlive";
-        document.head.appendChild(script);
-      }
-    }).catch(error => {
-      scriptPromise = null;
-      throw error;
-    });
+  const BASIC_MATH = [
+    ["+", "+"], ["−", "−"], ["×", "×"], ["÷", "÷"],
+    ["=", "="], ["≠", "≠"], ["≈", "≈"], ["±", "±"],
+    ["∓", "∓"], ["(", "("], [")", ")"],
+    ["[", "["], ["]", "]"], ["{", "{"], ["}", "}"],
+    ["<", "<"], [">", ">"], ["≤", "≤"], ["≥", "≥"],
+    ["%", "%"], [",", ","], [".", "."],
+    ["|", "|"], ["x", "x"], ["y", "y"], ["z", "z"]
+  ].map(([label, value]) => ({label, value}));
 
-    return scriptPromise;
-  }
+  const FRACTIONS_POWERS = [
+    ["½", "½"], ["⅓", "⅓"], ["⅔", "⅔"],
+    ["¼", "¼"], ["¾", "¾"], ["⅕", "⅕"],
+    ["⅖", "⅖"], ["⅗", "⅗"], ["⅘", "⅘"],
+    ["⅙", "⅙"], ["⅚", "⅚"], ["⅛", "⅛"],
+    ["⅜", "⅜"], ["⅝", "⅝"], ["⅞", "⅞"],
+    ["⁄", "⁄"], ["√", "√"], ["∛", "∛"],
+    ["∜", "∜"], ["x²", "²"], ["x³", "³"],
+    ["xⁿ", "ⁿ"], ["x⁴", "⁴"], ["x⁵", "⁵"],
+    ["₁", "₁"], ["₂", "₂"], ["₃", "₃"],
+    ["⁺", "⁺"], ["⁻", "⁻"], ["∞", "∞"],
+    ["π", "π"], ["°", "°"]
+  ].map(([label, value]) => ({label, value}));
+
+  const TRIG_FUNCTIONS = [
+    ["sin", "sin("], ["cos", "cos("],
+    ["tg", "tg("], ["ctg", "ctg("],
+    ["tan", "tan("], ["cot", "cot("],
+    ["sec", "sec("], ["csc", "csc("],
+    ["sin⁻¹", "sin⁻¹("], ["cos⁻¹", "cos⁻¹("],
+    ["tg⁻¹", "tg⁻¹("], ["log", "log("],
+    ["ln", "ln("], ["lg", "lg("],
+    ["lim", "lim"], ["f(x)", "f(x)"],
+    ["d/dx", "d/dx"], ["eˣ", "eˣ"],
+    ["log₂", "log₂("], ["logₙ", "logₙ("],
+    ["Δ", "Δ"], ["θ", "θ"],
+    ["α", "α"], ["β", "β"]
+  ].map(([label, value]) => ({label, value}));
+
+  const MATH_SYMBOLS = [
+    ..."∑∫∬∮∂∇∈∉⊂⊆∪∩∅∀∃⇒⇔⊥∥∠∝∴∵"
+      .split("").map(x => ({label:x,value:x})),
+    ..."αβγδεζηθικλμνξπρστυφχψω"
+      .split("").map(x => ({label:x,value:x})),
+    ..."ΑΒΓΔΘΛΠΣΩ"
+      .split("").map(x => ({label:x,value:x}))
+  ];
+
+  const PHYSICS_SYMBOLS = [
+    ..."FmasvtgP A EWNpρμλωTQ IURqCB"
+      .replace(/ /g, "").split("")
+      .map(x => ({label:x,value:x})),
+    ["Ω", "Ω"], ["Φ", "Φ"], ["η", "η"],
+    ["φ", "φ"], ["ℏ", "ℏ"], ["ν", "ν"],
+    ["Δ", "Δ"], ["°C", "°C"], ["°F", "°F"],
+    ["m/s", "m/s"], ["km/h", "km/h"],
+    ["m/s²", "m/s²"], ["N", "N"],
+    ["J", "J"], ["W", "W"], ["Pa", "Pa"],
+    ["Hz", "Hz"], ["V", "V"], ["A", "A"],
+    ["Ω", "Ω"], ["C", "C"], ["T", "T"]
+  ].map(x => Array.isArray(x)
+    ? ({label:x[0],value:x[1]})
+    : x);
+
+  // =========================================
+  // 4. KIMYO VA BIOLOGIYA
+  // =========================================
+
+  const INDEX_TOOLS = [
+    ..."⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻"
+      .split("").map(x => ({label:x,value:x})),
+    ..."₀₁₂₃₄₅₆₇₈₉"
+      .split("").map(x => ({label:x,value:x})),
+    ...["²⁺","²⁻","³⁺","³⁻","⁴⁺","⁴⁻"]
+      .map(x => ({label:x,value:x}))
+  ];
+
+  const CHEMISTRY_SYMBOLS = [
+    ["→", " → "], ["⇌", " ⇌ "], ["↔", " ↔ "],
+    ["↑", "↑"], ["↓", "↓"], ["Δ", "Δ"],
+    ["°", "°"], ["·", "·"], ["±", "±"],
+    ["=", " = "], ["+", " + "], ["−", " − "],
+    ["(s)", "(s)"], ["(l)", "(l)"],
+    ["(g)", "(g)"], ["(aq)", "(aq)"],
+    ["e⁻", "e⁻"], ["hν", "hν"], ["t°", "t°"]
+  ].map(([label,value]) => ({label,value}));
+
+  const CHEMISTRY_IONS = [
+    "H⁺","OH⁻","Na⁺","K⁺","Ag⁺",
+    "Ca²⁺","Mg²⁺","Ba²⁺","Zn²⁺",
+    "Cu²⁺","Fe²⁺","Fe³⁺","Al³⁺",
+    "Cl⁻","Br⁻","I⁻","NO₃⁻",
+    "SO₄²⁻","SO₃²⁻","CO₃²⁻",
+    "HCO₃⁻","PO₄³⁻","NH₄⁺",
+    "MnO₄⁻","Cr₂O₇²⁻"
+  ].map(x => ({label:x,value:x}));
+
+  const BIOLOGY_SYMBOLS = [
+    "♀","♂","×","F₁","F₂","P",
+    "DNA","RNA","mRNA","tRNA",
+    "ATP","ADP","NAD","NADH",
+    "O₂","CO₂","H₂O","α","β","γ",
+    "Δ","→","↔","↑","↓",
+    "Aa","AA","aa","Xᴬ","Xᵃ",
+    "Y","XX","XY","n","2n",
+    "G₁","G₂","S","M"
+  ].map(x => ({label:x,value:x}));
+
+  // =========================================
+  // 5. ELEMENTLAR — 118 TA
+  // =========================================
+
+  const ELEMENTS = (
+    "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca " +
+    "Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr " +
+    "Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe " +
+    "Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu " +
+    "Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn " +
+    "Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr " +
+    "Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og"
+  ).split(" ").map(x => ({label:x,value:x}));
+
+  // =========================================
+  // 6. KLAVIATURALAR TARTIBI
+  // =========================================
+
+  const BANKS = {
+
+    matematika: {
+      "1. Raqamlar": NUMBERS,
+      "2. Asosiy belgilar": BASIC_MATH,
+      "3. Kasrlar, ildizlar va darajalar": FRACTIONS_POWERS,
+      "4. Trigonometriya va funksiyalar": TRIG_FUNCTIONS,
+      "5. Qo'shimcha matematik belgilar": MATH_SYMBOLS
+    },
+
+    fizika: {
+      "1. Raqamlar": NUMBERS,
+      "2. Asosiy belgilar": BASIC_MATH,
+      "3. Kasrlar, ildizlar va darajalar": FRACTIONS_POWERS,
+      "4. Matematik funksiyalar": TRIG_FUNCTIONS,
+      "5. Fizik belgilar": PHYSICS_SYMBOLS
+    },
+
+    kimyo: {
+      "1. Raqamlar": NUMBERS,
+      "2. Elementlar": ELEMENTS,
+      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
+      "4. Ionlar": CHEMISTRY_IONS,
+      "5. Reaksiya va amallar": CHEMISTRY_SYMBOLS
+    },
+
+    biologiya: {
+      "1. Raqamlar": NUMBERS,
+      "2. Biologik belgilar": BIOLOGY_SYMBOLS,
+      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
+      "4. Elementlar": ELEMENTS
+    }
+  };
+
+  // =========================================
+  // 7. CSS
+  // =========================================
 
   function addStyles() {
     if (document.getElementById("formula-editor-styles")) return;
@@ -157,97 +197,213 @@
 
     style.textContent = `
       .fm-backdrop {
-        position: fixed; inset: 0; z-index: 2147483000;
-        background: rgba(8,13,25,.75); display: flex;
-        align-items: flex-end; justify-content: center; padding: 4px;
-        box-sizing: border-box;
+        position:fixed;
+        inset:0;
+        z-index:2147483000;
+        background:rgba(8,13,25,.75);
+        display:flex;
+        align-items:flex-end;
+        justify-content:center;
+        padding:4px;
+        box-sizing:border-box;
       }
-      .fm-backdrop[hidden] { display: none !important; }
+
+      .fm-backdrop[hidden] {
+        display:none!important;
+      }
+
       .fm-panel {
-        width: min(520px, 100%); max-height: 96dvh; overflow-y: auto;
-        background: #0756b8; color: white; border-radius: 14px;
-        padding: 10px; box-sizing: border-box; box-shadow: 0 10px 40px #0008;
+        width:min(520px,100%);
+        max-height:96dvh;
+        overflow-y:auto;
+        background:#0756b8;
+        color:white;
+        border-radius:14px;
+        padding:10px;
+        box-sizing:border-box;
+        box-shadow:0 10px 40px #0008;
       }
+
       .fm-head {
-        display: flex; justify-content: space-between; align-items: center;
-        font-weight: bold; font-size: 15px; margin-bottom: 8px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        font-weight:bold;
+        font-size:15px;
+        margin-bottom:8px;
       }
+
       .fm-close {
-        width: 30px; height: 30px; border: 0; border-radius: 50%;
-        background: #ffffff22; color: white; font-size: 22px; cursor: pointer;
+        width:30px;
+        height:30px;
+        border:0;
+        border-radius:50%;
+        background:#ffffff22;
+        color:white;
+        font-size:22px;
+        cursor:pointer;
       }
+
       .fm-field {
-        display: block; width: 100%; min-height: 60px; background: white;
-        color: #111827; border-radius: 8px; padding: 6px; font-size: 22px;
-        margin-bottom: 8px; box-sizing: border-box; border: none;
+        width:100%;
+        min-height:65px;
+        resize:vertical;
+        background:white;
+        color:#111827;
+        border-radius:8px;
+        padding:10px;
+        font-size:22px;
+        margin-bottom:8px;
+        box-sizing:border-box;
+        border:none;
+        outline:none;
       }
-      .fm-section { margin: 8px 0; }
+
+      .fm-section {
+        margin:9px 0;
+      }
+
       .fm-section-title {
-        font-size: 13px; font-weight: bold; padding: 4px 2px;
-        border-bottom: 1px solid #ffffff44; margin-bottom: 6px; text-transform: uppercase;
+        font-size:13px;
+        font-weight:bold;
+        padding:6px 2px;
+        border-bottom:1px solid #ffffff44;
+        margin-bottom:6px;
       }
-      .fm-keys-grid8 {
-        display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px;
+
+      .fm-keys-grid {
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:4px;
       }
-      .fm-keys-grid-win {
-        display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px;
+
+      .fm-number-grid {
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:5px;
       }
-      .fm-keys-flex { display: flex; flex-wrap: wrap; gap: 4px; }
+
+      .fm-keys-flex {
+        display:flex;
+        flex-wrap:wrap;
+        gap:4px;
+      }
+
       .fm-key {
-        min-height: 38px; border: 0; border-radius: 5px;
-        background: #ffffff; color: #0756b8; font-size: 13px; font-weight: bold;
-        padding: 2px; cursor: pointer; display: flex; align-items: center;
-        justify-content: center; touch-action: manipulation;
+        min-height:39px;
+        min-width:38px;
+        border:0;
+        border-radius:5px;
+        background:white;
+        color:#0756b8;
+        font-size:14px;
+        font-weight:bold;
+        padding:5px;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        touch-action:manipulation;
+        user-select:none;
+        -webkit-user-select:none;
       }
-      .fm-key:active { background: #dbeafe; transform: scale(0.95); }
-      .fm-key math-field {
-        pointer-events: none; border: 0; background: transparent; font-size: 14px;
+
+      .fm-key:active {
+        background:#bfdbfe;
+        transform:scale(.96);
       }
-      .fm-key-win {
-        min-height: 34px; background: #f8fafc; color: #0f172a; font-size: 14px;
+
+      .fm-number-grid .fm-key {
+        min-height:44px;
+        font-size:19px;
       }
-      .fm-fixed-tools { display: flex; gap: 4px; margin-top: 8px; }
-      .fm-fixed-tools button {
-        flex: 1; min-height: 36px; border: 0; border-radius: 6px;
-        font-size: 14px; font-weight: bold; background: #1e3a8a; color: white; cursor: pointer;
-      }
-      .fm-actions { display: flex; gap: 6px; margin-top: 6px; }
-      .fm-actions button {
-        flex: 1; min-height: 40px; border: 0; border-radius: 6px;
-        font-size: 14px; font-weight: bold; cursor: pointer;
-      }
-      .fm-cancel { background: #334155; color: white; }
-      .fm-save { background: #0f9f82; color: white; }
-      .fm-open {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 36px; height: 36px; margin-left: 4px; border: 0;
-        border-radius: 6px; background: #e0f2fe; color: #075985;
-        font-weight: bold; cursor: pointer;
-      }
+
       .fm-elements-grid {
-        display: grid;
-        grid-template-columns: repeat(10, minmax(0, 1fr));
-        gap: 3px;
+        display:grid;
+        grid-template-columns:repeat(8,minmax(0,1fr));
+        gap:4px;
       }
-      .fm-element-key {
-        min-height: 36px;
-        font-size: 14px;
-        background: #ffffff;
-        color: #0756b8;
-        border: 1px solid #dbeafe;
+
+      .fm-fixed-tools {
+        display:flex;
+        gap:4px;
+        margin-top:8px;
       }
-      .fm-element-key:active { background: #bfdbfe; }
-      .fm-key { user-select: none; -webkit-user-select: none; }
-      @media (max-width: 380px) {
-        .fm-elements-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-        .fm-key { min-height: 34px; font-size: 12px; }
+
+      .fm-fixed-tools button {
+        flex:1;
+        min-height:36px;
+        border:0;
+        border-radius:6px;
+        font-size:14px;
+        font-weight:bold;
+        background:#1e3a8a;
+        color:white;
+        cursor:pointer;
+      }
+
+      .fm-actions {
+        display:flex;
+        gap:6px;
+        margin-top:6px;
+      }
+
+      .fm-actions button {
+        flex:1;
+        min-height:40px;
+        border:0;
+        border-radius:6px;
+        font-size:14px;
+        font-weight:bold;
+        cursor:pointer;
+      }
+
+      .fm-cancel {
+        background:#334155;
+        color:white;
+      }
+
+      .fm-save {
+        background:#0f9f82;
+        color:white;
+      }
+
+      .fm-open {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:36px;
+        height:36px;
+        margin-left:4px;
+        border:0;
+        border-radius:6px;
+        background:#e0f2fe;
+        color:#075985;
+        font-weight:bold;
+        cursor:pointer;
+      }
+
+      @media(max-width:380px) {
+        .fm-elements-grid {
+          grid-template-columns:repeat(7,minmax(0,1fr));
+        }
+        .fm-key {
+          min-height:35px;
+          font-size:12px;
+        }
       }
     `;
+
     document.head.appendChild(style);
   }
 
+  // =========================================
+  // 8. OYNA
+  // =========================================
+
   function ensureModal() {
     if (modal) return;
+
     addStyles();
 
     modal = document.createElement("div");
@@ -256,126 +412,138 @@
 
     modal.innerHTML = `
       <section class="fm-panel" role="dialog" aria-modal="true">
+
         <div class="fm-head">
-          <span id="fm-title">Formula Muharriri</span>
+          <span id="fm-title">Formula muharriri</span>
           <button type="button" class="fm-close" id="fm-close">×</button>
         </div>
-        <math-field id="fm-field" class="fm-field" virtual-keyboard-mode="manual"></math-field>
+
+        <textarea
+          id="fm-field"
+          class="fm-field"
+          placeholder="Javobingizni kiriting..."
+          spellcheck="false"
+        ></textarea>
+
         <div id="fm-sections"></div>
+
         <div class="fm-fixed-tools">
           <button type="button" id="fm-backspace">⌫ O'chirish</button>
           <button type="button" id="fm-clear">C Tozalash</button>
         </div>
+
         <div class="fm-actions">
-          <button type="button" class="fm-cancel" id="fm-cancel">Bekor qilish</button>
-          <button type="button" class="fm-save" id="fm-save">Tayyor ✓</button>
+          <button type="button" class="fm-cancel" id="fm-cancel">
+            Bekor qilish
+          </button>
+          <button type="button" class="fm-save" id="fm-save">
+            Tayyor ✓
+          </button>
         </div>
+
       </section>
     `;
 
     document.body.appendChild(modal);
-    mathfield = modal.querySelector("#fm-field");
 
-    modal.querySelector("#fm-close").addEventListener("click", close);
-    modal.querySelector("#fm-cancel").addEventListener("click", close);
-    modal.querySelector("#fm-save").addEventListener("click", save);
+    editor = modal.querySelector("#fm-field");
 
-    modal.querySelector("#fm-backspace").addEventListener("click", () => {
-      try { mathfield.executeCommand("deleteBackward"); } catch (_) {}
-      mathfield.focus();
+    modal.querySelector("#fm-close").addEventListener("click",close);
+    modal.querySelector("#fm-cancel").addEventListener("click",close);
+    modal.querySelector("#fm-save").addEventListener("click",save);
+
+    modal.querySelector("#fm-backspace").addEventListener("click",() => {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+
+      if (start !== end) {
+        editor.setRangeText("",start,end,"end");
+      } else if (start > 0) {
+        editor.setRangeText("",start-1,start,"end");
+      }
+
+      editor.focus();
     });
 
-    modal.querySelector("#fm-clear").addEventListener("click", () => {
-      mathfield.value = "";
-      mathfield.focus();
+    modal.querySelector("#fm-clear").addEventListener("click",() => {
+      editor.value = "";
+      editor.focus();
     });
 
-    modal.addEventListener("click", ev => {
+    modal.addEventListener("click",ev => {
       if (ev.target === modal) close();
     });
+
+    modal.addEventListener("keydown",ev => {
+      if (ev.key === "Escape") close();
+    });
   }
+
+  // =========================================
+  // 9. UNICODE BELGI KIRITISH
+  // =========================================
 
   function insertValue(value) {
-    if (!mathfield) return;
-    try {
-      mathfield.focus();
-      if (typeof mathfield.insert === "function") {
-        mathfield.insert(value);
-      } else {
-        mathfield.executeCommand(["insert", value]);
-      }
-    } catch (_) {
-      mathfield.value = (mathfield.value || "") + value;
-    }
+    if (!editor) return;
+
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+
+    editor.setRangeText(
+      value,
+      start,
+      end,
+      "end"
+    );
+
+    editor.focus();
   }
 
-  function renderLabel(button, latex) {
-    const mf = document.createElement("math-field");
-    mf.setAttribute("read-only", "");
-    mf.setAttribute("virtual-keyboard-mode", "off");
-    mf.value = latex;
-    button.appendChild(mf);
-  }
+  // =========================================
+  // 10. KLAVIATURANI CHIZISH
+  // =========================================
 
   function renderBank() {
     const container = modal.querySelector("#fm-sections");
     container.replaceChildren();
 
-    const bank = BANKS[activeSubject] || BANKS.matematika;
+    const bank = BANKS[activeSubject];
 
-    Object.entries(bank).forEach(([title, items]) => {
+    Object.entries(bank).forEach(([title,items],index) => {
+
       const section = document.createElement("section");
       section.className = "fm-section";
 
       const heading = document.createElement("div");
       heading.className = "fm-section-title";
       heading.textContent = title;
+
       section.appendChild(heading);
 
-      const isCalculator = title.includes("Kalkulyator");
-      const isElements = title.includes("Elementlar");
-
       const grid = document.createElement("div");
-      grid.className = isCalculator ? "fm-keys-grid8" :
-        (isElements ? "fm-elements-grid" : "fm-keys-flex");
+
+      if (index === 0) {
+        grid.className = "fm-number-grid";
+      } else if (title.includes("Elementlar")) {
+        grid.className = "fm-elements-grid";
+      } else {
+        grid.className = "fm-keys-flex";
+      }
 
       items.forEach(item => {
+
         const button = document.createElement("button");
         button.type = "button";
         button.className = "fm-key";
 
-        let label;
-        let value;
+        button.textContent = item.label;
+        button.title = item.label;
+        button.setAttribute("aria-label",item.label);
 
-        if (item && item.type === "element") {
-          label = item.symbol;
-          value = item.symbol;
-          button.title = item.name;
-          button.setAttribute("aria-label", item.symbol + " — " + item.name);
-          button.classList.add("fm-element-key");
-        } else if (typeof item === "object" && item !== null) {
-          label = item.label || item.value;
-          value = item.value;
-        } else {
-          label = item;
-          value = item;
-        }
-
-        button.setAttribute("aria-label", String(label));
-
-        if (
-          (activeSubject === "matematika" || activeSubject === "fizika") &&
-          /[\\^_{}]/.test(String(value))
-        ) {
-          renderLabel(button, String(value));
-        } else {
-          button.textContent = String(label);
-        }
-
-        button.addEventListener("click", ev => {
+        button.addEventListener("click",ev => {
           ev.preventDefault();
           ev.stopPropagation();
-          insertValue(String(value));
+          insertValue(item.value);
         });
 
         grid.appendChild(button);
@@ -386,83 +554,120 @@
     });
   }
 
-  async function open(target, subject) {
+  // =========================================
+  // 11. OCHISH
+  // =========================================
+
+  function open(target,subject) {
     if (!target) return;
+
     activeTarget = target;
 
-    const key = String(subject || "matematika").toLowerCase().trim();
+    const key = String(subject || "matematika")
+      .toLowerCase()
+      .trim();
+
     activeSubject = BANKS[key] ? key : "matematika";
 
     ensureModal();
-    modal.hidden = false;
 
     const titles = {
-      matematika: "Matematika — MathLive klaviaturasi",
-      fizika: "Fizika — MathLive klaviaturasi",
-      kimyo: "Kimyo — ChemKey uslubidagi klaviatura",
-      biologiya: "Biologiya — maxsus belgilar klaviaturasi"
+      matematika:"Matematika — Unicode klaviatura",
+      fizika:"Fizika — Unicode klaviatura",
+      kimyo:"Kimyo — ChemKey uslubi",
+      biologiya:"Biologiya — maxsus klaviatura"
     };
-    modal.querySelector("#fm-title").textContent = titles[activeSubject];
 
-    try {
-      await loadMathLive();
-      if (!modal || !activeTarget) return;
-      mathfield.value = target.value || "";
-      renderBank();
-      mathfield.focus();
-    } catch (error) {
-      alert(error.message || "Xatolik yuz berdi.");
-      close();
-    }
+    modal.querySelector("#fm-title").textContent =
+      titles[activeSubject];
+
+    editor.value = target.value || "";
+
+    renderBank();
+
+    modal.hidden = false;
+    editor.focus();
   }
 
+  // =========================================
+  // 12. SAQLASH
+  // =========================================
+
   function save() {
-    if (!activeTarget || !mathfield) {
+    if (!activeTarget || !editor) {
       close();
       return;
     }
 
-    const latex = typeof mathfield.getValue === "function"
-      ? mathfield.getValue("latex")
-      : mathfield.value;
+    activeTarget.value = editor.value;
 
-    activeTarget.value = latex || "";
-    activeTarget.dispatchEvent(new Event("input", { bubbles: true }));
-    activeTarget.dispatchEvent(new Event("change", { bubbles: true }));
+    activeTarget.dispatchEvent(
+      new Event("input",{bubbles:true})
+    );
+
+    activeTarget.dispatchEvent(
+      new Event("change",{bubbles:true})
+    );
+
     close();
   }
+
+  // =========================================
+  // 13. YOPISH
+  // =========================================
 
   function close() {
     if (modal) modal.hidden = true;
     activeTarget = null;
   }
 
-  function attach(target, subject) {
-    if (!target || target.dataset.formulaButtonAttached === "1") return;
+  // =========================================
+  // 14. BOTGA ULASH
+  // =========================================
+
+  function attach(target,subject) {
+    if (!target || target.dataset.formulaButtonAttached === "1") {
+      return;
+    }
+
     target.dataset.formulaButtonAttached = "1";
 
-    const selectedSubject = String(subject || "matematika").toLowerCase();
+    const selectedSubject =
+      String(subject || "matematika").toLowerCase();
 
     function openForTarget(event) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
+
       target.blur();
-      open(target, selectedSubject);
+      open(target,selectedSubject);
     }
 
-    target.addEventListener("click", openForTarget);
+    target.addEventListener("click",openForTarget);
 
     const button = document.createElement("button");
+
     button.type = "button";
     button.className = "fm-open";
     button.textContent = "∑";
-    button.title = "Muharrirni ochish";
-    button.addEventListener("click", openForTarget);
+    button.title = "Maxsus klaviaturani ochish";
 
-    target.insertAdjacentElement("afterend", button);
+    button.addEventListener("click",openForTarget);
+
+    target.insertAdjacentElement("afterend",button);
   }
 
-  window.FormulaEditor = { open, attach, banks: BANKS, close };
+  // =========================================
+  // 15. BOT UCHUN API
+  // =========================================
+
+  window.FormulaEditor = {
+    open,
+    attach,
+    close,
+    banks: BANKS
+  };
+
 })();
