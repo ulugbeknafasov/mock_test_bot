@@ -778,8 +778,7 @@
           hidden
         ></math-field>
 
-        <div id="fm-sections"></div>
-
+        <!-- KURSOR VA AMAL TUGMALARI -->
         <div class="fm-fixed-tools">
           <button type="button" id="fm-left">←</button>
           <button type="button" id="fm-up">↑</button>
@@ -789,6 +788,7 @@
           <button type="button" id="fm-clear">C</button>
         </div>
 
+        <!-- BEKOR QILISH VA SAQLASH -->
         <div class="fm-actions">
           <button type="button" class="fm-cancel" id="fm-cancel">
             Bekor qilish
@@ -798,6 +798,9 @@
             Tayyor ✓
           </button>
         </div>
+
+        <!-- FAN KLAVIATURALARI -->
+        <div id="fm-sections"></div>
 
       </section>
     `;
