@@ -2,140 +2,85 @@
 (function () {
   "use strict";
 
-  // =========================================
-  // 1. BOT BILAN ULANISH
-  // =========================================
-
   let activeTarget = null;
   let activeSubject = "matematika";
   let modal = null;
   let editor = null;
+  let scriptPromise = null;
 
-  // =========================================
-  // 2. RAQAMLAR — BARCHASIDA 1-BO'LIM
-  // =========================================
+  // =====================================
+  // RAQAMLAR
+  // =====================================
 
-  const NUMBERS = [
-    ..."0123456789".split("").map(x => ({
-      label: x, value: x
-    }))
-  ];
+  const NUMBERS = "0123456789".split("").map(x => ({
+    label: x, value: x
+  }));
 
-  // =========================================
-  // 3. MATEMATIKA VA FIZIKA
-  // =========================================
+  // =====================================
+  // MATEMATIK HARFLAR
+  // =====================================
 
-  const BASIC_MATH = [
+  const LETTERS = [
+    ..."xyzabcdef".split(""),
+    ..."XYZABCDEF".split("")
+  ].map(x => ({label:x,value:x}));
+
+  // =====================================
+  // MATEMATIK AMALLAR
+  // =====================================
+
+  const BASIC = [
     ["+", "+"], ["−", "−"], ["×", "×"], ["÷", "÷"],
     ["=", "="], ["≠", "≠"], ["≈", "≈"], ["±", "±"],
-    ["∓", "∓"], ["(", "("], [")", ")"],
-    ["[", "["], ["]", "]"], ["{", "{"], ["}", "}"],
-    ["<", "<"], [">", ">"], ["≤", "≤"], ["≥", "≥"],
-    ["%", "%"], [",", ","], [".", "."],
-    ["|", "|"], ["x", "x"], ["y", "y"], ["z", "z"]
-  ].map(([label, value]) => ({label, value}));
+    ["∓", "∓"], ["<", "<"], [">", ">"],
+    ["≤", "≤"], ["≥", "≥"], ["%", "%"],
+    ["(", "("], [")", ")"], ["[", "["], ["]", "]"],
+    [",", ","], [".", "."], ["∞", "∞"], ["π", "π"]
+  ].map(([label,value]) => ({label,value}));
 
-  const FRACTIONS_POWERS = [
-    ["½", "½"], ["⅓", "⅓"], ["⅔", "⅔"],
-    ["¼", "¼"], ["¾", "¾"], ["⅕", "⅕"],
-    ["⅖", "⅖"], ["⅗", "⅗"], ["⅘", "⅘"],
-    ["⅙", "⅙"], ["⅚", "⅚"], ["⅛", "⅛"],
-    ["⅜", "⅜"], ["⅝", "⅝"], ["⅞", "⅞"],
-    ["⁄", "⁄"], ["√", "√"], ["∛", "∛"],
-    ["∜", "∜"], ["x²", "²"], ["x³", "³"],
-    ["xⁿ", "ⁿ"], ["x⁴", "⁴"], ["x⁵", "⁵"],
-    ["₁", "₁"], ["₂", "₂"], ["₃", "₃"],
-    ["⁺", "⁺"], ["⁻", "⁻"], ["∞", "∞"],
-    ["π", "π"], ["°", "°"]
-  ].map(([label, value]) => ({label, value}));
+  // =====================================
+  // FORMULA MUHARRIRI UCHUN TUGMALAR
+  // =====================================
 
-  const TRIG_FUNCTIONS = [
-    ["sin", "sin("], ["cos", "cos("],
-    ["tg", "tg("], ["ctg", "ctg("],
-    ["tan", "tan("], ["cot", "cot("],
-    ["sec", "sec("], ["csc", "csc("],
-    ["sin⁻¹", "sin⁻¹("], ["cos⁻¹", "cos⁻¹("],
-    ["tg⁻¹", "tg⁻¹("], ["log", "log("],
-    ["ln", "ln("], ["lg", "lg("],
-    ["lim", "lim"], ["f(x)", "f(x)"],
-    ["d/dx", "d/dx"], ["eˣ", "eˣ"],
-    ["log₂", "log₂("], ["logₙ", "logₙ("],
-    ["Δ", "Δ"], ["θ", "θ"],
-    ["α", "α"], ["β", "β"]
-  ].map(([label, value]) => ({label, value}));
+  const STRUCTURES = [
+    {label:"Kasr", command:"fraction"},
+    {label:"Ildiz", command:"sqrt"},
+    {label:"Kub ildiz", command:"cbrt"},
+    {label:"Daraja", command:"power"},
+    {label:"Indeks", command:"subscript"},
+    {label:"Qavs", command:"parentheses"},
+    {label:"Modul", command:"absolute"},
+    {label:"Matritsa", command:"matrix"}
+  ];
+
+  const FUNCTIONS = [
+    "sin","cos","tg","ctg","tan","cot",
+    "sec","csc","log","ln","lg","lim",
+    "arcsin","arccos","arctg"
+  ].map(x => ({label:x,value:x}));
 
   const MATH_SYMBOLS = [
     ..."∑∫∬∮∂∇∈∉⊂⊆∪∩∅∀∃⇒⇔⊥∥∠∝∴∵"
-      .split("").map(x => ({label:x,value:x})),
+  ].split("").map(x => ({label:x,value:x}));
+
+  const GREEK = [
     ..."αβγδεζηθικλμνξπρστυφχψω"
-      .split("").map(x => ({label:x,value:x})),
-    ..."ΑΒΓΔΘΛΠΣΩ"
-      .split("").map(x => ({label:x,value:x}))
-  ];
+  ].split("").map(x => ({label:x,value:x}));
 
-  const PHYSICS_SYMBOLS = [
-    ..."FmasvtgP A EWNpρμλωTQ IURqCB"
-      .replace(/ /g, "").split("")
-      .map(x => ({label:x,value:x})),
-    ["Ω", "Ω"], ["Φ", "Φ"], ["η", "η"],
-    ["φ", "φ"], ["ℏ", "ℏ"], ["ν", "ν"],
-    ["Δ", "Δ"], ["°C", "°C"], ["°F", "°F"],
-    ["m/s", "m/s"], ["km/h", "km/h"],
-    ["m/s²", "m/s²"], ["N", "N"],
-    ["J", "J"], ["W", "W"], ["Pa", "Pa"],
-    ["Hz", "Hz"], ["V", "V"], ["A", "A"],
-    ["Ω", "Ω"], ["C", "C"], ["T", "T"]
-  ].map(x => Array.isArray(x)
-    ? ({label:x[0],value:x[1]})
-    : x);
+  const PHYSICS = [
+    ..."FmasvtgPAEWNpρμλωTQIRqCB"
+  ].split("").map(x => ({label:x,value:x}));
 
-  // =========================================
-  // 4. KIMYO VA BIOLOGIYA
-  // =========================================
+  // =====================================
+  // KIMYO VA BIOLOGIYA
+  // =====================================
 
-  const INDEX_TOOLS = [
+  const INDEX = [
     ..."⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻"
-      .split("").map(x => ({label:x,value:x})),
-    ..."₀₁₂₃₄₅₆₇₈₉"
-      .split("").map(x => ({label:x,value:x})),
-    ...["²⁺","²⁻","³⁺","³⁻","⁴⁺","⁴⁻"]
-      .map(x => ({label:x,value:x}))
-  ];
-
-  const CHEMISTRY_SYMBOLS = [
-    ["→", " → "], ["⇌", " ⇌ "], ["↔", " ↔ "],
-    ["↑", "↑"], ["↓", "↓"], ["Δ", "Δ"],
-    ["°", "°"], ["·", "·"], ["±", "±"],
-    ["=", " = "], ["+", " + "], ["−", " − "],
-    ["(s)", "(s)"], ["(l)", "(l)"],
-    ["(g)", "(g)"], ["(aq)", "(aq)"],
-    ["e⁻", "e⁻"], ["hν", "hν"], ["t°", "t°"]
-  ].map(([label,value]) => ({label,value}));
-
-  const CHEMISTRY_IONS = [
-    "H⁺","OH⁻","Na⁺","K⁺","Ag⁺",
-    "Ca²⁺","Mg²⁺","Ba²⁺","Zn²⁺",
-    "Cu²⁺","Fe²⁺","Fe³⁺","Al³⁺",
-    "Cl⁻","Br⁻","I⁻","NO₃⁻",
-    "SO₄²⁻","SO₃²⁻","CO₃²⁻",
-    "HCO₃⁻","PO₄³⁻","NH₄⁺",
-    "MnO₄⁻","Cr₂O₇²⁻"
-  ].map(x => ({label:x,value:x}));
-
-  const BIOLOGY_SYMBOLS = [
-    "♀","♂","×","F₁","F₂","P",
-    "DNA","RNA","mRNA","tRNA",
-    "ATP","ADP","NAD","NADH",
-    "O₂","CO₂","H₂O","α","β","γ",
-    "Δ","→","↔","↑","↓",
-    "Aa","AA","aa","Xᴬ","Xᵃ",
-    "Y","XX","XY","n","2n",
-    "G₁","G₂","S","M"
-  ].map(x => ({label:x,value:x}));
-
-  // =========================================
-  // 5. ELEMENTLAR — 118 TA
-  // =========================================
+  ].split("").map(x => ({label:x,value:x}))
+  .concat(
+    [..."₀₁₂₃₄₅₆₇₈₉"].map(x => ({label:x,value:x}))
+  );
 
   const ELEMENTS = (
     "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca " +
@@ -147,47 +92,102 @@
     "Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og"
   ).split(" ").map(x => ({label:x,value:x}));
 
-  // =========================================
-  // 6. KLAVIATURALAR TARTIBI
-  // =========================================
+  const IONS = [
+    "H⁺","OH⁻","Na⁺","K⁺","Ag⁺",
+    "Ca²⁺","Mg²⁺","Ba²⁺","Zn²⁺",
+    "Cu²⁺","Fe²⁺","Fe³⁺","Al³⁺",
+    "Cl⁻","Br⁻","I⁻","NO₃⁻",
+    "SO₄²⁻","SO₃²⁻","CO₃²⁻",
+    "HCO₃⁻","PO₄³⁻","NH₄⁺",
+    "MnO₄⁻","Cr₂O₇²⁻"
+  ].map(x => ({label:x,value:x}));
+
+  const CHEMICAL = [
+    "→","⇌","↔","↑","↓","Δ","°","·",
+    "+","−","=","(s)","(l)","(g)","(aq)","e⁻","hν","t°"
+  ].map(x => ({label:x,value:x}));
+
+  const BIOLOGY = [
+    "♀","♂","×","F₁","F₂","P",
+    "DNA","RNA","mRNA","tRNA",
+    "ATP","ADP","NAD","NADH",
+    "O₂","CO₂","H₂O","α","β","γ",
+    "Δ","→","↔","↑","↓",
+    "Aa","AA","aa","Xᴬ","Xᵃ",
+    "Y","XX","XY","n","2n","G₁","G₂"
+  ].map(x => ({label:x,value:x}));
+
+  // =====================================
+  // BO'LIMLAR
+  // =====================================
 
   const BANKS = {
-
     matematika: {
       "1. Raqamlar": NUMBERS,
-      "2. Asosiy belgilar": BASIC_MATH,
-      "3. Kasrlar, ildizlar va darajalar": FRACTIONS_POWERS,
-      "4. Trigonometriya va funksiyalar": TRIG_FUNCTIONS,
-      "5. Qo'shimcha matematik belgilar": MATH_SYMBOLS
+      "2. Harflar": LETTERS,
+      "3. Asosiy amallar": BASIC,
+      "4. Kasr, ildiz, daraja va indeks": STRUCTURES,
+      "5. Trigonometriya va funksiyalar": FUNCTIONS,
+      "6. Matematik belgilar": MATH_SYMBOLS,
+      "7. Yunon harflari": GREEK
     },
 
     fizika: {
       "1. Raqamlar": NUMBERS,
-      "2. Asosiy belgilar": BASIC_MATH,
-      "3. Kasrlar, ildizlar va darajalar": FRACTIONS_POWERS,
-      "4. Matematik funksiyalar": TRIG_FUNCTIONS,
-      "5. Fizik belgilar": PHYSICS_SYMBOLS
+      "2. Harflar": LETTERS,
+      "3. Asosiy amallar": BASIC,
+      "4. Kasr, ildiz, daraja va indeks": STRUCTURES,
+      "5. Matematik funksiyalar": FUNCTIONS,
+      "6. Fizik belgilar": PHYSICS,
+      "7. Yunon harflari": GREEK
     },
 
     kimyo: {
       "1. Raqamlar": NUMBERS,
       "2. Elementlar": ELEMENTS,
-      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
-      "4. Ionlar": CHEMISTRY_IONS,
-      "5. Reaksiya va amallar": CHEMISTRY_SYMBOLS
+      "3. Yuqori va pastki indekslar": INDEX,
+      "4. Ionlar": IONS,
+      "5. Reaksiya va amallar": CHEMICAL
     },
 
     biologiya: {
       "1. Raqamlar": NUMBERS,
-      "2. Biologik belgilar": BIOLOGY_SYMBOLS,
-      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
+      "2. Biologik belgilar": BIOLOGY,
+      "3. Yuqori va pastki indekslar": INDEX,
       "4. Elementlar": ELEMENTS
     }
   };
 
-  // =========================================
-  // 7. CSS
-  // =========================================
+  // =====================================
+  // MATHLIVE YUKLASH
+  // =====================================
+
+  function loadMathLive() {
+    if (customElements.get("math-field")) {
+      return Promise.resolve();
+    }
+
+    if (scriptPromise) return scriptPromise;
+
+    scriptPromise = new Promise((resolve,reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/mathlive";
+      script.onload = resolve;
+      script.onerror = () => reject(
+        new Error("Matematik muharrir yuklanmadi.")
+      );
+      document.head.appendChild(script);
+    }).catch(error => {
+      scriptPromise = null;
+      throw error;
+    });
+
+    return scriptPromise;
+  }
+
+  // =====================================
+  // DIZAYN
+  // =====================================
 
   function addStyles() {
     if (document.getElementById("formula-editor-styles")) return;
@@ -208,9 +208,7 @@
         box-sizing:border-box;
       }
 
-      .fm-backdrop[hidden] {
-        display:none!important;
-      }
+      .fm-backdrop[hidden] { display:none!important; }
 
       .fm-panel {
         width:min(520px,100%);
@@ -221,7 +219,6 @@
         border-radius:14px;
         padding:10px;
         box-sizing:border-box;
-        box-shadow:0 10px 40px #0008;
       }
 
       .fm-head {
@@ -229,39 +226,34 @@
         justify-content:space-between;
         align-items:center;
         font-weight:bold;
-        font-size:15px;
         margin-bottom:8px;
       }
 
       .fm-close {
-        width:30px;
-        height:30px;
+        width:32px;
+        height:32px;
         border:0;
         border-radius:50%;
         background:#ffffff22;
         color:white;
         font-size:22px;
-        cursor:pointer;
       }
 
       .fm-field {
+        display:block;
         width:100%;
-        min-height:65px;
-        resize:vertical;
+        min-height:90px;
         background:white;
         color:#111827;
         border-radius:8px;
-        padding:10px;
-        font-size:22px;
+        padding:8px;
+        font-size:23px;
         margin-bottom:8px;
         box-sizing:border-box;
         border:none;
-        outline:none;
       }
 
-      .fm-section {
-        margin:9px 0;
-      }
+      .fm-section { margin:9px 0; }
 
       .fm-section-title {
         font-size:13px;
@@ -271,9 +263,9 @@
         margin-bottom:6px;
       }
 
-      .fm-keys-grid {
-        display:grid;
-        grid-template-columns:repeat(5,minmax(0,1fr));
+      .fm-grid {
+        display:flex;
+        flex-wrap:wrap;
         gap:4px;
       }
 
@@ -283,29 +275,29 @@
         gap:5px;
       }
 
-      .fm-keys-flex {
-        display:flex;
-        flex-wrap:wrap;
+      .fm-element-grid {
+        display:grid;
+        grid-template-columns:repeat(8,minmax(0,1fr));
         gap:4px;
       }
 
       .fm-key {
-        min-height:39px;
+        min-height:40px;
         min-width:38px;
         border:0;
         border-radius:5px;
         background:white;
         color:#0756b8;
-        font-size:14px;
+        font-size:15px;
         font-weight:bold;
         padding:5px;
         cursor:pointer;
-        display:flex;
-        align-items:center;
-        justify-content:center;
         touch-action:manipulation;
-        user-select:none;
-        -webkit-user-select:none;
+      }
+
+      .fm-number-grid .fm-key {
+        min-height:45px;
+        font-size:20px;
       }
 
       .fm-key:active {
@@ -313,60 +305,46 @@
         transform:scale(.96);
       }
 
-      .fm-number-grid .fm-key {
-        min-height:44px;
-        font-size:19px;
-      }
-
-      .fm-elements-grid {
-        display:grid;
-        grid-template-columns:repeat(8,minmax(0,1fr));
-        gap:4px;
-      }
-
-      .fm-fixed-tools {
+      .fm-tools {
         display:flex;
-        gap:4px;
-        margin-top:8px;
+        flex-wrap:wrap;
+        gap:5px;
+        margin:8px 0;
       }
 
-      .fm-fixed-tools button {
-        flex:1;
-        min-height:36px;
+      .fm-tools button {
+        flex:1 1 22%;
+        min-height:38px;
+        background:#dbeafe;
+        color:#0756b8;
         border:0;
         border-radius:6px;
-        font-size:14px;
         font-weight:bold;
-        background:#1e3a8a;
-        color:white;
         cursor:pointer;
       }
 
-      .fm-actions {
+      .fm-fixed-tools,.fm-actions {
         display:flex;
         gap:6px;
-        margin-top:6px;
+        margin-top:7px;
       }
 
-      .fm-actions button {
+      .fm-fixed-tools button,.fm-actions button {
         flex:1;
         min-height:40px;
         border:0;
         border-radius:6px;
-        font-size:14px;
         font-weight:bold;
         cursor:pointer;
       }
 
-      .fm-cancel {
-        background:#334155;
+      .fm-fixed-tools button {
+        background:#1e3a8a;
         color:white;
       }
 
-      .fm-save {
-        background:#0f9f82;
-        color:white;
-      }
+      .fm-cancel { background:#334155;color:white; }
+      .fm-save { background:#0f9f82;color:white; }
 
       .fm-open {
         display:inline-flex;
@@ -382,24 +360,14 @@
         font-weight:bold;
         cursor:pointer;
       }
-
-      @media(max-width:380px) {
-        .fm-elements-grid {
-          grid-template-columns:repeat(7,minmax(0,1fr));
-        }
-        .fm-key {
-          min-height:35px;
-          font-size:12px;
-        }
-      }
     `;
 
     document.head.appendChild(style);
   }
 
-  // =========================================
-  // 8. OYNA
-  // =========================================
+  // =====================================
+  // MODAL
+  // =====================================
 
   function ensureModal() {
     if (modal) return;
@@ -418,12 +386,9 @@
           <button type="button" class="fm-close" id="fm-close">×</button>
         </div>
 
-        <textarea
-          id="fm-field"
-          class="fm-field"
-          placeholder="Javobingizni kiriting..."
-          spellcheck="false"
-        ></textarea>
+        <div id="fm-editor"></div>
+
+        <div id="fm-structure-tools"></div>
 
         <div id="fm-sections"></div>
 
@@ -446,23 +411,24 @@
 
     document.body.appendChild(modal);
 
-    editor = modal.querySelector("#fm-field");
-
     modal.querySelector("#fm-close").addEventListener("click",close);
     modal.querySelector("#fm-cancel").addEventListener("click",close);
     modal.querySelector("#fm-save").addEventListener("click",save);
 
     modal.querySelector("#fm-backspace").addEventListener("click",() => {
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-
-      if (start !== end) {
-        editor.setRangeText("",start,end,"end");
-      } else if (start > 0) {
-        editor.setRangeText("",start-1,start,"end");
+      if (activeSubject === "matematika" || activeSubject === "fizika") {
+        editor.executeCommand("deleteBackward");
+        editor.focus();
+      } else {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        if (start !== end) {
+          editor.setRangeText("",start,end,"end");
+        } else if (start > 0) {
+          editor.setRangeText("",start-1,start,"end");
+        }
+        editor.focus();
       }
-
-      editor.focus();
     });
 
     modal.querySelector("#fm-clear").addEventListener("click",() => {
@@ -473,125 +439,207 @@
     modal.addEventListener("click",ev => {
       if (ev.target === modal) close();
     });
-
-    modal.addEventListener("keydown",ev => {
-      if (ev.key === "Escape") close();
-    });
   }
 
-  // =========================================
-  // 9. UNICODE BELGI KIRITISH
-  // =========================================
+  // =====================================
+  // MATEMATIK TUZILMALAR
+  // =====================================
 
-  function insertValue(value) {
+  function insertStructure(command) {
     if (!editor) return;
 
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-
-    editor.setRangeText(
-      value,
-      start,
-      end,
-      "end"
-    );
+    const commands = {
+      fraction: "\\frac{#@}{#?}",
+      sqrt: "\\sqrt{#@}",
+      cbrt: "\\sqrt[3]{#@}",
+      power: "^{#@}",
+      subscript: "_{#@}",
+      parentheses: "(#@)",
+      absolute: "|#@|",
+      matrix: "\\begin{matrix}#@&\\\\#?&\\end{matrix}"
+    };
 
     editor.focus();
+    editor.insert(commands[command] || "");
   }
 
-  // =========================================
-  // 10. KLAVIATURANI CHIZISH
-  // =========================================
+  // =====================================
+  // KLAVIATURA CHIZISH
+  // =====================================
 
   function renderBank() {
     const container = modal.querySelector("#fm-sections");
     container.replaceChildren();
 
-    const bank = BANKS[activeSubject];
+    Object.entries(BANKS[activeSubject]).forEach(
+      ([title,items],index) => {
 
-    Object.entries(bank).forEach(([title,items],index) => {
+        const section = document.createElement("section");
+        section.className = "fm-section";
 
-      const section = document.createElement("section");
-      section.className = "fm-section";
+        const heading = document.createElement("div");
+        heading.className = "fm-section-title";
+        heading.textContent = title;
+        section.appendChild(heading);
 
-      const heading = document.createElement("div");
-      heading.className = "fm-section-title";
-      heading.textContent = title;
+        const grid = document.createElement("div");
 
-      section.appendChild(heading);
+        grid.className =
+          index === 0 ? "fm-number-grid" :
+          title.includes("Elementlar") ? "fm-element-grid" :
+          "fm-grid";
 
-      const grid = document.createElement("div");
+        items.forEach(item => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "fm-key";
+          button.textContent = item.label;
 
-      if (index === 0) {
-        grid.className = "fm-number-grid";
-      } else if (title.includes("Elementlar")) {
-        grid.className = "fm-elements-grid";
-      } else {
-        grid.className = "fm-keys-flex";
-      }
+          button.addEventListener("click",ev => {
+            ev.preventDefault();
 
-      items.forEach(item => {
+            if (item.command) {
+              insertStructure(item.command);
+            } else if (
+              activeSubject === "matematika" ||
+              activeSubject === "fizika"
+            ) {
+              editor.focus();
+              editor.insert(item.value);
+            } else {
+              insertUnicode(item.value);
+            }
+          });
 
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "fm-key";
-
-        button.textContent = item.label;
-        button.title = item.label;
-        button.setAttribute("aria-label",item.label);
-
-        button.addEventListener("click",ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          insertValue(item.value);
+          grid.appendChild(button);
         });
 
-        grid.appendChild(button);
-      });
-
-      section.appendChild(grid);
-      container.appendChild(section);
-    });
+        section.appendChild(grid);
+        container.appendChild(section);
+      }
+    );
   }
 
-  // =========================================
-  // 11. OCHISH
-  // =========================================
+  function insertUnicode(value) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
 
-  function open(target,subject) {
+    editor.setRangeText(value,start,end,"end");
+    editor.focus();
+  }
+
+  // =====================================
+  // MUHARRIR TURINI O'RNATISH
+  // =====================================
+
+  async function setupEditor() {
+    const host = modal.querySelector("#fm-editor");
+    host.replaceChildren();
+
+    if (
+      activeSubject === "matematika" ||
+      activeSubject === "fizika"
+    ) {
+      await loadMathLive();
+
+      editor = document.createElement("math-field");
+      editor.className = "fm-field";
+      editor.setAttribute("virtual-keyboard-mode","manual");
+
+      host.appendChild(editor);
+
+      const tools = modal.querySelector("#fm-structure-tools");
+      tools.replaceChildren();
+
+      const row = document.createElement("div");
+      row.className = "fm-tools";
+
+      STRUCTURES.forEach(item => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = item.label;
+
+        button.addEventListener("click",() => {
+          insertStructure(item.command);
+        });
+
+        row.appendChild(button);
+      });
+
+      tools.appendChild(row);
+
+    } else {
+      editor = document.createElement("textarea");
+      editor.className = "fm-field";
+      editor.placeholder = "Javobingizni kiriting...";
+      editor.spellcheck = false;
+
+      host.appendChild(editor);
+      modal.querySelector("#fm-structure-tools").replaceChildren();
+    }
+  }
+
+  // =====================================
+  // OCHISH
+  // =====================================
+
+  async function open(target,subject) {
     if (!target) return;
 
     activeTarget = target;
 
-    const key = String(subject || "matematika")
-      .toLowerCase()
-      .trim();
-
+    const key = String(subject || "matematika").toLowerCase().trim();
     activeSubject = BANKS[key] ? key : "matematika";
 
     ensureModal();
 
     const titles = {
-      matematika:"Matematika — Unicode klaviatura",
-      fizika:"Fizika — Unicode klaviatura",
-      kimyo:"Kimyo — ChemKey uslubi",
-      biologiya:"Biologiya — maxsus klaviatura"
+      matematika:"Matematika — Formula muharriri",
+      fizika:"Fizika — Formula muharriri",
+      kimyo:"Kimyo — Unicode klaviatura",
+      biologiya:"Biologiya — Unicode klaviatura"
     };
 
-    modal.querySelector("#fm-title").textContent =
-      titles[activeSubject];
-
-    editor.value = target.value || "";
-
-    renderBank();
-
+    modal.querySelector("#fm-title").textContent = titles[activeSubject];
     modal.hidden = false;
-    editor.focus();
+
+    try {
+      await setupEditor();
+
+      if (!activeTarget) return;
+
+      if (
+        activeSubject === "matematika" ||
+        activeSubject === "fizika"
+      ) {
+        // MathJSON formatida oldingi saqlangan formulani tiklash
+        const oldValue = target.value || "";
+
+        if (oldValue.startsWith("MATHJSON:")) {
+          editor.setValue(
+            JSON.parse(oldValue.slice(9)),
+            "math-json"
+          );
+        } else {
+          editor.value = oldValue;
+        }
+
+      } else {
+        editor.value = target.value || "";
+      }
+
+      renderBank();
+      editor.focus();
+
+    } catch(error) {
+      alert(error.message || "Muharrirni yuklashda xatolik.");
+      close();
+    }
   }
 
-  // =========================================
-  // 12. SAQLASH
-  // =========================================
+  // =====================================
+  // SAQLASH
+  // =====================================
 
   function save() {
     if (!activeTarget || !editor) {
@@ -599,7 +647,19 @@
       return;
     }
 
-    activeTarget.value = editor.value;
+    if (
+      activeSubject === "matematika" ||
+      activeSubject === "fizika"
+    ) {
+      // LaTeX emas, strukturali MathJSON
+      const mathJSON = editor.getValue("math-json");
+
+      activeTarget.value =
+        "MATHJSON:" + JSON.stringify(mathJSON);
+
+    } else {
+      activeTarget.value = editor.value;
+    }
 
     activeTarget.dispatchEvent(
       new Event("input",{bubbles:true})
@@ -612,18 +672,18 @@
     close();
   }
 
-  // =========================================
-  // 13. YOPISH
-  // =========================================
+  // =====================================
+  // YOPISH
+  // =====================================
 
   function close() {
     if (modal) modal.hidden = true;
     activeTarget = null;
   }
 
-  // =========================================
-  // 14. BOTGA ULASH
-  // =========================================
+  // =====================================
+  // BOTGA ULASH
+  // =====================================
 
   function attach(target,subject) {
     if (!target || target.dataset.formulaButtonAttached === "1") {
@@ -648,20 +708,19 @@
     target.addEventListener("click",openForTarget);
 
     const button = document.createElement("button");
-
     button.type = "button";
     button.className = "fm-open";
     button.textContent = "∑";
-    button.title = "Maxsus klaviaturani ochish";
+    button.title = "Formula muharririni ochish";
 
     button.addEventListener("click",openForTarget);
 
     target.insertAdjacentElement("afterend",button);
   }
 
-  // =========================================
-  // 15. BOT UCHUN API
-  // =========================================
+  // =====================================
+  // API
+  // =====================================
 
   window.FormulaEditor = {
     open,
