@@ -1,4 +1,3 @@
-
 (function () {
   "use strict";
 
@@ -224,8 +223,49 @@
 
       .fm-keys {
         display: grid;
-        grid-template-columns: repeat(6,minmax(0,1fr));
+        grid-template-columns: repeat(8,minmax(0,1fr));
         gap: 7px;
+      }
+
+      .fm-panel.fm-science .fm-keys {
+        grid-template-columns:repeat(10,minmax(0,1fr));
+      }
+
+      .fm-panel.fm-math {
+        background:#0756b8;
+        border-color:#3b82f6;
+      }
+
+      .fm-panel.fm-math .fm-tab {
+        background:#174b91;
+        color:#fff;
+      }
+
+      .fm-panel.fm-math .fm-tab.active {
+        background:#fff;
+        color:#0756b8;
+      }
+
+      .fm-panel.fm-math .fm-key {
+        min-height:44px;
+        background:#fff;
+        color:#12345a;
+        border:0;
+        border-radius:10px;
+        font-weight:700;
+      }
+
+      .fm-panel.fm-science .fm-key {
+        min-height:40px;
+        background:#f8fafc;
+        color:#172033;
+        border-color:#cbd5e1;
+        border-radius:8px;
+        font-size:15px;
+      }
+
+      .fm-panel.fm-science .fm-tab.active {
+        background:#2563eb;
       }
 
       .fm-key {
@@ -368,36 +408,108 @@
   }
 
   function renderBank() {
-    const bank = BANKS[activeSubject] || BANKS.matematika;
-    const tabs = Object.keys(bank.tabs);
+    const panel = modal.querySelector(".fm-panel");
+
+    panel.classList.toggle(
+      "fm-math",
+      activeSubject === "matematika" || activeSubject === "fizika"
+    );
+
+    panel.classList.toggle(
+      "fm-science",
+      activeSubject === "kimyo" || activeSubject === "biologiya"
+    );
+
+    if (
+      activeSubject === "matematika" ||
+      activeSubject === "fizika"
+    ) {
+      const bank = BANKS.matematika;
+      const tabs = Object.keys(bank.tabs);
+      const tabsBox = modal.querySelector("#fm-tabs");
+
+      tabsBox.innerHTML = "";
+
+      tabs.forEach((tab, index) => {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className =
+          "fm-tab" + (index === 0 ? " active" : "");
+
+        button.textContent = tab;
+
+        button.onclick = () => {
+          tabsBox.querySelectorAll("button").forEach(item =>
+            item.classList.remove("active")
+          );
+
+          button.classList.add("active");
+          renderKeys(bank.tabs[tab]);
+        };
+
+        tabsBox.appendChild(button);
+      });
+
+      renderKeys(bank.tabs[tabs[0]] || []);
+      return;
+    }
 
     const tabsBox = modal.querySelector("#fm-tabs");
 
     tabsBox.innerHTML = "";
 
-    tabs.forEach((tab, index) => {
+    const groups = {
+      "Harf va raqam": [
+        "1","2","3","4","5","6","7","8","9","0",
+        "q","w","e","r","t","y","u","i","o","p",
+        "a","s","d","f","g","h","j","k","l",
+        "z","x","c","v","b","n","m",
+        "+","−","=","(",")"
+      ],
+
+      "Indekslar": [
+        "x^2","x^n","x_2","x_n",
+        "^{+}","^{-}","^{2+}","^{3+}",
+        "^{2-}","^{3-}",
+        "→","⇌","↑","↓","°","μ",
+        "α","β","γ","Δ","⌫","Tozalash"
+      ],
+
+      "Tayyor formulalar": activeSubject === "kimyo"
+        ? [
+            "H_2O","CO_2","O_2","N_2","NH_3",
+            "CH_4","H_2SO_4","NaOH","CaCO_3",
+            "C_6H_{12}O_6","Fe^{3+}","SO_4^{2-}"
+          ]
+        : [
+            "DNA","RNA","mRNA","tRNA","ATP","ADP",
+            "♀","♂","μm","°C","α","β"
+          ]
+    };
+
+    Object.keys(groups).forEach((tab, index) => {
       const button = document.createElement("button");
 
       button.type = "button";
-      button.className = "fm-tab" + (
-        index === 0 ? " active" : ""
-      );
+      button.className =
+        "fm-tab" + (index === 0 ? " active" : "");
 
       button.textContent = tab;
 
       button.onclick = () => {
-        tabsBox.querySelectorAll("button").forEach(item => {
-          item.classList.remove("active");
-        });
+        tabsBox.querySelectorAll("button").forEach(item =>
+          item.classList.remove("active")
+        );
 
         button.classList.add("active");
-        renderKeys(bank.tabs[tab]);
+        renderKeys(groups[tab]);
       };
 
       tabsBox.appendChild(button);
     });
 
-    renderKeys(bank.tabs[tabs[0]] || []);
+    renderKeys(groups["Harf va raqam"]);
   }
 
   function renderKeys(keys) {
@@ -416,7 +528,25 @@
         "$1"
       );
 
-      button.onclick = () => insertLatex(key);
+      button.onclick = () => {
+        if (key === "⌫") {
+          try {
+            mathfield.executeCommand("deleteBackward");
+          } catch (_) {
+            mathfield.value =
+              (mathfield.value || "").slice(0, -1);
+          }
+
+          mathfield.focus();
+
+        } else if (key === "Tozalash") {
+          mathfield.value = "";
+          mathfield.focus();
+
+        } else {
+          insertLatex(key);
+        }
+      };
 
       box.appendChild(button);
     });
@@ -447,8 +577,13 @@
 
       renderBank();
       mathfield.focus();
+
     } catch (error) {
-      alert(error.message || "Formula muharriri yuklanmadi.");
+      alert(
+        error.message ||
+        "Formula muharriri yuklanmadi."
+      );
+
       close();
     }
   }
@@ -458,9 +593,10 @@
       return close();
     }
 
-    const latex = typeof mathfield.getValue === "function"
-      ? mathfield.getValue("latex")
-      : mathfield.value;
+    const latex =
+      typeof mathfield.getValue === "function"
+        ? mathfield.getValue("latex")
+        : mathfield.value;
 
     activeTarget.value = latex || "";
 
@@ -477,11 +613,15 @@
 
   function close() {
     if (modal) modal.hidden = true;
+
     activeTarget = null;
   }
 
   function attach(target, subject) {
-    if (!target || target.dataset.formulaButtonAttached === "1") {
+    if (
+      !target ||
+      target.dataset.formulaButtonAttached === "1"
+    ) {
       return;
     }
 
@@ -493,17 +633,25 @@
     button.className = "fm-open";
     button.textContent = "∑";
     button.title = "Formula muharririni ochish";
+
     button.setAttribute(
       "aria-label",
       "Formula muharririni ochish"
     );
 
-    button.addEventListener("click", () => {
+    const launchEditor = () => {
       open(
         target,
-        subject || document.body.dataset.subject || "matematika"
+        subject ||
+        document.body.dataset.subject ||
+        "matematika"
       );
-    });
+    };
+
+    button.addEventListener("click", launchEditor);
+
+    // Inputga kirilganda test fani bo‘yicha mos klaviatura avtomatik ochiladi.
+    target.addEventListener("focus", launchEditor);
 
     target.insertAdjacentElement("afterend", button);
   }
