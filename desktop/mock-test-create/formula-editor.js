@@ -12,6 +12,7 @@
         "Calculus": ["\\int_{a}^{b} f(x)\\,dx","\\sum_{i=1}^{n} a_i","\\prod_{i=1}^{n} a_i","\\frac{d}{dx}","\\partial","\\nabla","\\infty"]
       }
     },
+
     fizika: {
       tabs: {
         "Raqamlar": ["0","1","2","3","4","5","6","7","8","9",".",","],
@@ -22,6 +23,7 @@
         "Issiqlik va optika": ["Q=cm\\Delta T","\\eta","n=\\frac{c}{v}","\\lambda","\\nu","\\alpha","\\beta","\\theta","\\varphi"]
       }
     },
+
     kimyo: {
       tabs: {
         "Raqamlar": ["0","1","2","3","4","5","6","7","8","9",".",","],
@@ -32,6 +34,7 @@
         "Ionlar": ["Na^+","Cl^-","SO_4^{2-}","NO_3^-","CO_3^{2-}","NH_4^+","Ca^{2+}","Fe^{3+}","e^-","H^+","OH^-"]
       }
     },
+
     biologiya: {
       tabs: {
         "Raqamlar": ["0","1","2","3","4","5","6","7","8","9",".",","],
@@ -50,23 +53,51 @@
   let mathfield = null;
   let scriptPromise = null;
 
+  // MathLive kutubxonasini yuklash
   function loadMathLive() {
-    if (customElements.get("math-field")) return Promise.resolve();
+    if (customElements.get("math-field")) {
+      return Promise.resolve();
+    }
+
     if (scriptPromise) return scriptPromise;
 
     scriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/mathlive";
-      script.onload = resolve;
-      script.onerror = () => reject(
-        new Error("Formula kutubxonasi yuklanmadi.")
-      );
-      document.head.appendChild(script);
+      const existing = document.querySelector('script[src*="mathlive"]');
+      const script = existing || document.createElement("script");
+
+      const onLoad = () => {
+        if (customElements.get("math-field")) {
+          resolve();
+        } else {
+          reject(new Error("MathLive yuklandi, lekin math-field elementi topilmadi."));
+        }
+      };
+
+      const onError = () => {
+        reject(new Error("Formula kutubxonasi yuklanmadi. Internet aloqasini tekshiring."));
+      };
+
+      if (customElements.get("math-field")) {
+        resolve();
+        return;
+      }
+
+      script.addEventListener("load", onLoad, { once: true });
+      script.addEventListener("error", onError, { once: true });
+
+      if (!existing) {
+        script.src = "https://cdn.jsdelivr.net/npm/mathlive";
+        document.head.appendChild(script);
+      }
+    }).catch(error => {
+      scriptPromise = null;
+      throw error;
     });
 
     return scriptPromise;
   }
 
+  // Dizayn
   function addStyles() {
     if (document.getElementById("formula-editor-styles")) return;
 
@@ -280,6 +311,7 @@
     document.head.appendChild(style);
   }
 
+  // Formula oynasini yaratish
   function ensureModal() {
     if (modal) return;
 
@@ -291,17 +323,16 @@
 
     modal.innerHTML = `
       <section class="fm-panel"
-               role="dialog"
-               aria-modal="true"
-               aria-label="Formula muharriri">
+        role="dialog"
+        aria-modal="true"
+        aria-label="Formula muharriri">
 
         <div class="fm-head">
           <span id="fm-title">Formula muharriri</span>
-
           <button type="button"
-                  class="fm-close"
-                  id="fm-close"
-                  aria-label="Yopish">×</button>
+            class="fm-close"
+            id="fm-close"
+            aria-label="Yopish">×</button>
         </div>
 
         <math-field
@@ -315,17 +346,18 @@
 
         <div class="fm-actions">
           <button type="button"
-                  class="fm-cancel"
-                  id="fm-cancel">Bekor qilish</button>
+            class="fm-cancel"
+            id="fm-cancel">Bekor qilish</button>
 
           <button type="button"
-                  class="fm-save"
-                  id="fm-save">Kiritish ✓</button>
+            class="fm-save"
+            id="fm-save">Kiritish ✓</button>
         </div>
       </section>
     `;
 
     document.body.appendChild(modal);
+
     mathfield = modal.querySelector("#fm-field");
 
     modal.querySelector("#fm-close").addEventListener("click", ev => {
@@ -355,6 +387,7 @@
     });
   }
 
+  // Formula kiritish
   function insertValue(value) {
     if (!mathfield) return;
 
@@ -371,6 +404,7 @@
     }
   }
 
+  // Tugmada formulani chiroyli ko'rsatish
   function renderKeyLabel(button, latex) {
     const mf = document.createElement("math-field");
 
@@ -381,6 +415,7 @@
     button.appendChild(mf);
   }
 
+  // Klaviatura tugmalarini chiqarish
   function renderKeys(keys) {
     const box = modal.querySelector("#fm-keys");
     box.replaceChildren();
@@ -391,10 +426,9 @@
         : item;
 
       const button = document.createElement("button");
-      button.type = "button";
-      button.className = "fm-key" +
-        (entry.wide ? " fm-wide" : "");
 
+      button.type = "button";
+      button.className = "fm-key" + (entry.wide ? " fm-wide" : "");
       button.setAttribute("aria-label", entry.label);
 
       if (entry.action) {
@@ -408,8 +442,7 @@
             try {
               mathfield.executeCommand("deleteBackward");
             } catch (_) {
-              mathfield.value =
-                (mathfield.value || "").slice(0, -1);
+              mathfield.value = (mathfield.value || "").slice(0, -1);
             }
 
             mathfield.focus();
@@ -420,10 +453,7 @@
           }
         });
 
-      } else if (
-        entry.render !== false &&
-        /[\\^_{}]/.test(entry.value)
-      ) {
+      } else if (entry.render !== false && /[\\^_{}]/.test(entry.value)) {
         renderKeyLabel(button, entry.value);
 
         button.addEventListener("click", ev => {
@@ -446,6 +476,7 @@
     });
   }
 
+  // Fanlar bo'yicha klaviatura
   function renderBank() {
     const bank = BANKS[activeSubject] || BANKS.matematika;
     const tabsBox = modal.querySelector("#fm-tabs");
@@ -456,18 +487,16 @@
       const button = document.createElement("button");
 
       button.type = "button";
-      button.className =
-        "fm-tab" + (index === 0 ? " active" : "");
-
+      button.className = "fm-tab" + (index === 0 ? " active" : "");
       button.textContent = tab;
 
       button.addEventListener("click", ev => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        tabsBox.querySelectorAll(".fm-tab").forEach(el =>
-          el.classList.remove("active")
-        );
+        tabsBox.querySelectorAll(".fm-tab").forEach(el => {
+          el.classList.remove("active");
+        });
 
         button.classList.add("active");
         renderKeys(keys);
@@ -495,16 +524,20 @@
     renderKeys(first.concat(utility));
   }
 
+  // Formula muharririni ochish
   async function open(target, subject) {
     if (!target) return;
 
     activeTarget = target;
 
-    activeSubject = BANKS[String(subject || "").toLowerCase()]
-      ? String(subject).toLowerCase()
+    const selectedSubject = String(subject || "").toLowerCase();
+
+    activeSubject = BANKS[selectedSubject]
+      ? selectedSubject
       : "matematika";
 
     ensureModal();
+
     modal.hidden = false;
 
     modal.querySelector("#fm-title").textContent =
@@ -520,6 +553,7 @@
       mathfield.value = target.value || "";
 
       renderBank();
+
       mathfield.focus();
 
     } catch (error) {
@@ -528,6 +562,7 @@
     }
   }
 
+  // Formulani javob maydoniga saqlash
   function save() {
     if (!activeTarget || !mathfield) {
       close();
@@ -553,11 +588,16 @@
     close();
   }
 
+  // Oynani yopish
   function close() {
-    if (modal) modal.hidden = true;
+    if (modal) {
+      modal.hidden = true;
+    }
+
     activeTarget = null;
   }
 
+  // Javob maydonlariga formula tugmasini ulash
   function attach(target, subject) {
     if (!target || target.dataset.formulaButtonAttached === "1") {
       return;
@@ -565,6 +605,28 @@
 
     target.dataset.formulaButtonAttached = "1";
 
+    const selectedSubject = String(
+      subject || document.body.dataset.subject || "matematika"
+    ).toLowerCase();
+
+    function openForTarget(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      // Oddiy telefon klaviaturasi ochilib ketmasin.
+      if (document.activeElement === target) {
+        target.blur();
+      }
+
+      open(target, selectedSubject);
+    }
+
+    // Javob maydonining o'ziga bosilganda formula muharriri ochiladi.
+    target.addEventListener("click", openForTarget);
+
+    // ∑ tugmasi ham ishlaydi.
     const button = document.createElement("button");
 
     button.type = "button";
@@ -577,23 +639,17 @@
       "Formula muharririni ochish"
     );
 
-    button.addEventListener("click", ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      open(
-        target,
-        subject || document.body.dataset.subject || "matematika"
-      );
-    });
+    button.addEventListener("click", openForTarget);
 
     target.insertAdjacentElement("afterend", button);
   }
 
+  // Tashqi sahifalar foydalanishi uchun
   window.FormulaEditor = {
     open,
     attach,
     banks: BANKS,
     close
   };
+
 })();
