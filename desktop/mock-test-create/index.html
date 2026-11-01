@@ -746,7 +746,7 @@
 
         .dual-answer-part {
             display: grid;
-            grid-template-columns: 28px minmax(0, 1fr);
+            grid-template-columns: 28px minmax(0, 1fr) 40px;
             align-items: center;
             gap: 6px;
             width: 100%;
@@ -784,7 +784,7 @@
         @media (max-width: 420px) {
             .answer-row { gap: 8px; }
             .answer-number { flex-basis: 30px; width: 30px; }
-            .dual-answer-part { grid-template-columns: 25px minmax(0, 1fr); }
+            .dual-answer-part { grid-template-columns: 25px minmax(0, 1fr) 40px; }
             .dual-answer-part .exact-answer { height: 42px; font-size: 14px; }
         }
 
@@ -853,7 +853,7 @@ img {
 }
 .dual-answer-part {
     display:grid !important;
-    grid-template-columns:32px minmax(0,1fr) !important;
+    grid-template-columns:32px minmax(0,1fr) 40px !important;
     align-items:center !important;
     gap:9px !important;
     min-height:48px !important;
@@ -871,7 +871,7 @@ img {
     .answer-row.dual-answer-row { min-height:146px !important; padding:14px 0 20px !important; }
     .answer-row.dual-answer-row .answer-number { flex-basis:34px !important; width:34px !important; padding-top:17px !important; }
     .dual-answer-wrap { gap:18px !important; }
-    .dual-answer-part { grid-template-columns:28px minmax(0,1fr) !important; gap:8px !important; min-height:50px !important; }
+    .dual-answer-part { grid-template-columns:28px minmax(0,1fr) 40px !important; gap:8px !important; min-height:50px !important; }
     .dual-answer-part .exact-answer { height:50px !important; min-height:50px !important; }
 }
 
@@ -884,30 +884,11 @@ img {
     box-sizing:border-box; --caret-color:#2481cc;
 }
 .math-answer-field:focus-within { border-color:#2481cc; outline:none; }
-
+.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0;height:48px;border-radius:10px;background:#f0f7ff;border:1px solid #2481cc;color:#2481cc;font-weight:bold;cursor:pointer}
 </style>
 
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 <script defer src="formula-editor.js"></script>
-<script>
-// Aniq javoblar uchun MathLive maydoni: qiymat LaTeX ko‘rinishida saqlanadi.
-function createMathAnswerField(placeholder, initialValue = "") {
-    const field = document.createElement("math-field");
-    field.className = "exact-answer math-answer-field";
-    field.setAttribute("virtual-keyboard-mode", "onfocus");
-    field.setAttribute("smart-fence", "true");
-    field.setAttribute("smart-superscript", "true");
-    field.setAttribute("default-mode", "math");
-    field.setAttribute("aria-label", placeholder || "Formula javobi");
-    field.setAttribute("placeholder", placeholder || "Javob");
-    field.value = initialValue || "";
-    field.addEventListener("input", () => {
-        field.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    return field;
-}
-</script>
-<style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
 
@@ -2061,7 +2042,7 @@ function openAnswerKey() {
 
             row.appendChild(options);
         } else if (i >= 36 && i <= 45) {
-            // Milliy sertifikat uslubidagi yopiq savol: bitta savolda 2 ta javob.
+            // Milliy sertifikat uslubidagi yopiq savol: bitta savolda 2 ta javob (Fanga moslashtirilgan FormulaEditor ulangan)
             row.classList.add("dual-answer-row");
             const wrap = document.createElement("div");
             wrap.className = "dual-answer-wrap";
@@ -2071,20 +2052,29 @@ function openAnswerKey() {
             const labelA = document.createElement("span");
             labelA.textContent = "a)";
             labelA.className = "dual-answer-label";
-            const inputA = createMathAnswerField("a) javob");
+            const inputA = document.createElement("input");
+            inputA.className = "exact-answer";
+            inputA.placeholder = "a) javob";
 
             const partB = document.createElement("div");
             partB.className = "dual-answer-part";
             const labelB = document.createElement("span");
             labelB.textContent = "b)";
             labelB.className = "dual-answer-label";
-            const inputB = createMathAnswerField("b) javob");
+            const inputB = document.createElement("input");
+            inputB.className = "exact-answer";
+            inputB.placeholder = "b) javob";
 
             const saveParts = function () {
                 window.answerKey[i] = [inputA.value.trim(), inputB.value.trim()];
             };
             inputA.addEventListener("input", saveParts);
             inputB.addEventListener("input", saveParts);
+
+            if (window.FormulaEditor) {
+                FormulaEditor.attach(inputA, draft.subject);
+                FormulaEditor.attach(inputB, draft.subject);
+            }
 
             partA.appendChild(labelA);
             partA.appendChild(inputA);
@@ -2094,11 +2084,16 @@ function openAnswerKey() {
             wrap.appendChild(partB);
             row.appendChild(wrap);
         } else {
-            const input = createMathAnswerField("Aniq javob");
+            const input = document.createElement("input");
+            input.className = "exact-answer";
+            input.placeholder = "Aniq javob";
             input.dataset.question = i;
             input.addEventListener("input", function () {
                 window.answerKey[i] = input.value.trim();
             });
+            if (window.FormulaEditor) {
+                FormulaEditor.attach(input, draft.subject);
+            }
             row.appendChild(input);
         }
 
