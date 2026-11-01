@@ -877,26 +877,37 @@ img {
 
 .subject-note{display:block;color:#64748b;font-size:12px;margin-top:6px}
 
-/* Replaced math-field visual view styling */
-.fm-replaced-math-view {
-    display: inline-flex;
-    align-items: center;
-    width: 100%;
-    min-height: 40px;
-    background: #fff;
-    color: #111827;
-    border: 1px solid #ddd;
-    border-radius: 11px;
-    padding: 6px 12px;
-    font-size: 18px;
-    cursor: pointer;
-    box-sizing: border-box;
+.math-answer-field {
+    display:block; min-width:0; width:100%; min-height:46px;
+    padding:8px 10px; border:1px solid #d9dee7; border-radius:12px;
+    background:#fff; color:#172033; font-size:20px;
+    box-sizing:border-box; --caret-color:#2481cc;
 }
+.math-answer-field:focus-within { border-color:#2481cc; outline:none; }
 
 </style>
 
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 <script defer src="formula-editor.js"></script>
+<script>
+// Aniq javoblar uchun MathLive maydoni: qiymat LaTeX ko‘rinishida saqlanadi.
+function createMathAnswerField(placeholder, initialValue = "") {
+    const field = document.createElement("math-field");
+    field.className = "exact-answer math-answer-field";
+    field.setAttribute("virtual-keyboard-mode", "onfocus");
+    field.setAttribute("smart-fence", "true");
+    field.setAttribute("smart-superscript", "true");
+    field.setAttribute("default-mode", "math");
+    field.setAttribute("aria-label", placeholder || "Formula javobi");
+    field.setAttribute("placeholder", placeholder || "Javob");
+    field.value = initialValue || "";
+    field.addEventListener("input", () => {
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    return field;
+}
+</script>
+<style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
 
@@ -1216,6 +1227,15 @@ img {
         </div>
 
 
+        <!--
+            Hozirgi serverda narx va muddat
+            admin tomonidan boshqariladi.
+
+            Keyingi bosqichda 1/3/6/12 oylik
+            tariflarni alohida serverdan oladigan qilamiz.
+        -->
+
+
         <div id="proPlans" class="pro-plans">
             <div class="tariff">Tariflar yuklanmoqda...</div>
         </div>
@@ -1235,6 +1255,10 @@ img {
 </div>
 
 
+
+<!-- =========================
+     DTM JAVOBLAR KALITI
+========================= -->
 <!-- =========================
      PRO TO‘LOV
  ========================= -->
@@ -1400,9 +1424,14 @@ document.addEventListener("DOMContentLoaded", function () {
    TELEGRAM
 ===================================== */
 
-const tg = window.Telegram.WebApp;
+const tg =
+    window.Telegram.WebApp;
+
+
 tg.ready();
+
 tg.expand();
+
 
 /* =====================================
    SERVER MANZILI
@@ -1414,15 +1443,23 @@ const API_BASE = "https://mock-test-bot-sn3n.onrender.com";
    USER / YAGONA FULL_NAME
 ===================================== */
 
-const user = tg.initDataUnsafe?.user;
+const user =
+    tg.initDataUnsafe?.user;
 
 async function loadSharedProfile() {
     if (!user) return;
 
+    // Telegram ID, username va vaqtinchalik avatar.
     document.getElementById("profileTelegramId").textContent = user.id;
     document.getElementById("profileUsername").textContent =
-        user.username ? "@" + user.username : "Username mavjud emas";
+        user.username
+            ? "@" + user.username
+            : "Username mavjud emas";
 
+    const telegramFallback =
+        [user.first_name || "", user.last_name || ""].join(" ").trim();
+
+    // Serverdagi yagona full_name ni olamiz.
     try {
         const response = await fetch(
             API_BASE + "/api/participant/profile",
@@ -1438,6 +1475,8 @@ async function loadSharedProfile() {
         const data = await response.json();
 
         if (response.ok && data.success) {
+            // Server bu endpointdan full_name ni to'g'ridan-to'g'ri qaytaradi.
+            // Eski format {profile:{full_name:...}} bo'lsa ham ishlasin.
             const profile = data.profile || data;
             const fullName =
                 String(profile.full_name || data.full_name || "").trim() ||
@@ -1446,18 +1485,30 @@ async function loadSharedProfile() {
             document.getElementById("welcomeText").textContent =
                 "👋 Assalomu alaykum, " + fullName + "!";
 
-            document.getElementById("profileName").textContent = fullName;
-            document.getElementById("profileAvatar").textContent = fullName.charAt(0).toUpperCase();
+            document.getElementById("profileName").textContent =
+                fullName;
+
+            document.getElementById("profileAvatar").textContent =
+                fullName.charAt(0).toUpperCase();
+
             return;
         }
     } catch (error) {
         console.error("Profil yuklash xatosi:", error);
     }
 
-    const fullName = "Ism-familiya kiritilmagan";
-    document.getElementById("welcomeText").textContent = "👋 Assalomu alaykum, " + fullName + "!";
-    document.getElementById("profileName").textContent = fullName;
-    document.getElementById("profileAvatar").textContent = fullName.charAt(0).toUpperCase();
+    // Server vaqtincha javob bermasa, faqat fallback ko'rsatamiz.
+    const fullName =
+        "Ism-familiya kiritilmagan";
+
+    document.getElementById("welcomeText").textContent =
+        "👋 Assalomu alaykum, " + fullName + "!";
+
+    document.getElementById("profileName").textContent =
+        fullName;
+
+    document.getElementById("profileAvatar").textContent =
+        fullName.charAt(0).toUpperCase();
 }
 
 loadSharedProfile();
@@ -1466,27 +1517,53 @@ loadSharedProfile();
    PRO STATUS
 ===================================== */
 
-let currentProData = null;
+let currentProData =
+    null;
+
 
 async function checkProStatus() {
+
     try {
-        const response = await fetch(
-            API_BASE + "/api/pro-status",
-            {
-                method: "GET",
-                headers: {
-                    "X-Telegram-Init-Data": tg.initData
+
+        const response =
+            await fetch(
+                API_BASE +
+                "/api/pro-status",
+                {
+                    method: "GET",
+
+                    headers: {
+                        "X-Telegram-Init-Data":
+                            tg.initData
+                    }
                 }
-            }
-        );
-        const data = await response.json();
-        currentProData = data;
+            );
+
+
+        const data =
+            await response.json();
+
+
+        currentProData =
+            data;
+
+
         return data;
+
     } catch (error) {
-        console.error("PRO server xatosi:", error);
+
+        console.error(
+            "PRO server xatosi:",
+            error
+        );
+
+
         return {
+
             success: false,
-            message: "Server bilan bog‘lanib bo‘lmadi."
+
+            message:
+                "Server bilan bog‘lanib bo‘lmadi."
         };
     }
 }
@@ -1497,79 +1574,228 @@ async function checkProStatus() {
 ===================================== */
 
 async function goProfile() {
-    document.getElementById("profileButton").classList.add("active");
-    document.getElementById("homeButton").classList.remove("active");
-    document.getElementById("profileModal").classList.add("show");
+
+    document.getElementById(
+        "profileButton"
+    ).classList.add("active");
+
+
+    document.getElementById(
+        "homeButton"
+    ).classList.remove("active");
+
+
+    document.getElementById(
+        "profileModal"
+    ).classList.add("show");
+
+
     await updateProfile();
 }
 
 
 async function updateProfile() {
-    const statusElement = document.getElementById("profileProStatus");
-    const timeElement = document.getElementById("profileProTime");
 
-    statusElement.textContent = "Tekshirilmoqda...";
-    timeElement.textContent = "—";
+    const statusElement =
+        document.getElementById(
+            "profileProStatus"
+        );
 
-    const data = await checkProStatus();
+
+    const timeElement =
+        document.getElementById(
+            "profileProTime"
+        );
+
+
+    statusElement.textContent =
+        "Tekshirilmoqda...";
+
+
+    timeElement.textContent =
+        "—";
+
+
+    const data =
+        await checkProStatus();
+
 
     if (!data.success) {
-        statusElement.textContent = "❌ Aniqlanmadi";
-        timeElement.textContent = data.message || "Server xatosi";
+
+        statusElement.textContent =
+            "❌ Aniqlanmadi";
+
+
+        timeElement.textContent =
+            data.message || "Server xatosi";
+
         return;
     }
+
+
+    /* ADMIN */
 
     if (data.admin) {
-        statusElement.textContent = "👑 Admin PRO";
-        timeElement.textContent = "Cheksiz";
+
+        statusElement.textContent =
+            "👑 Admin PRO";
+
+
+        timeElement.textContent =
+            "Cheksiz";
+
         return;
     }
 
+
+    /* PRO */
+
     if (data.pro) {
-        statusElement.textContent = "✅ PRO faol";
+
+        statusElement.textContent =
+            "✅ PRO faol";
+
+
         if (data.pro_until) {
-            updateRemainingTime(data.pro_until);
+
+            updateRemainingTime(
+                data.pro_until
+            );
+
             return;
         }
     }
 
-    statusElement.textContent = "❌ PRO mavjud emas";
-    timeElement.textContent = "PRO sotib oling";
+
+    /* PRO YO‘Q */
+
+    statusElement.textContent =
+        "❌ PRO mavjud emas";
+
+
+    timeElement.textContent =
+        "PRO sotib oling";
 }
 
 
-function updateRemainingTime(proUntil) {
-    const timeElement = document.getElementById("profileProTime");
-    const end = new Date(proUntil);
+function updateRemainingTime(
+    proUntil
+) {
+
+    const timeElement =
+        document.getElementById(
+            "profileProTime"
+        );
+
+
+    const end =
+        new Date(proUntil);
+
 
     function update() {
-        const now = new Date();
-        let difference = end.getTime() - now.getTime();
+
+        const now =
+            new Date();
+
+
+        let difference =
+            end.getTime() -
+            now.getTime();
+
 
         if (difference <= 0) {
-            timeElement.textContent = "PRO muddati tugagan";
-            document.getElementById("profileProStatus").textContent = "❌ PRO mavjud emas";
+
+            timeElement.textContent =
+                "PRO muddati tugagan";
+
+
+            document.getElementById(
+                "profileProStatus"
+            ).textContent =
+                "❌ PRO mavjud emas";
+
+
             return;
         }
 
-        const totalSeconds = Math.floor(difference / 1000);
-        const days = Math.floor(totalSeconds / 86400);
-        const hours = Math.floor((totalSeconds % 86400) / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
 
-        timeElement.textContent = "⏳ " + days + " kun " + hours + " soat " + minutes + " daqiqa qoldi";
+        const totalSeconds =
+            Math.floor(
+                difference / 1000
+            );
+
+
+        const days =
+            Math.floor(
+                totalSeconds /
+                86400
+            );
+
+
+        const hours =
+            Math.floor(
+                (
+                    totalSeconds %
+                    86400
+                ) / 3600
+            );
+
+
+        const minutes =
+            Math.floor(
+                (
+                    totalSeconds %
+                    3600
+                ) / 60
+            );
+
+
+        timeElement.textContent =
+            "⏳ " +
+            days +
+            " kun " +
+            hours +
+            " soat " +
+            minutes +
+            " daqiqa qoldi";
     }
 
+
     update();
-    clearInterval(window.proTimer);
-    window.proTimer = setInterval(update, 60000);
+
+
+    /*
+        Har daqiqada yangilanadi.
+    */
+
+    clearInterval(
+        window.proTimer
+    );
+
+
+    window.proTimer =
+        setInterval(
+            update,
+            60000
+        );
 }
 
 
 function closeProfile() {
-    document.getElementById("profileModal").classList.remove("show");
-    document.getElementById("profileButton").classList.remove("active");
-    document.getElementById("homeButton").classList.add("active");
+
+    document.getElementById(
+        "profileModal"
+    ).classList.remove("show");
+
+
+    document.getElementById(
+        "profileButton"
+    ).classList.remove("active");
+
+
+    document.getElementById(
+        "homeButton"
+    ).classList.add("active");
 }
 
 
@@ -1710,6 +1936,7 @@ async function continueCreate() {
     const channel = document.getElementById("channel").value.trim();
     const duration = document.getElementById("duration").value;
     const subject = document.getElementById("subject").value;
+    const questionCount = 45;
     const button = document.getElementById("continueButton");
 
     if (!testCode) {
@@ -1788,11 +2015,13 @@ function openAnswerKey() {
     window.answerKey = {};
 
     const grid = document.getElementById("answerGrid");
+
     if (!grid) {
         throw new Error("answerGrid elementi topilmadi.");
     }
 
     grid.innerHTML = "";
+
     const count = Number(draft.questionCount);
 
     for (let i = 1; i <= count; i++) {
@@ -1832,6 +2061,7 @@ function openAnswerKey() {
 
             row.appendChild(options);
         } else if (i >= 36 && i <= 45) {
+            // Milliy sertifikat uslubidagi yopiq savol: bitta savolda 2 ta javob.
             row.classList.add("dual-answer-row");
             const wrap = document.createElement("div");
             wrap.className = "dual-answer-wrap";
@@ -1841,29 +2071,20 @@ function openAnswerKey() {
             const labelA = document.createElement("span");
             labelA.textContent = "a)";
             labelA.className = "dual-answer-label";
-            const inputA = document.createElement("input");
-            inputA.className = "exact-answer";
-            inputA.placeholder = "a) javob";
+            const inputA = createMathAnswerField("a) javob");
 
             const partB = document.createElement("div");
             partB.className = "dual-answer-part";
             const labelB = document.createElement("span");
             labelB.textContent = "b)";
             labelB.className = "dual-answer-label";
-            const inputB = document.createElement("input");
-            inputB.className = "exact-answer";
-            inputB.placeholder = "b) javob";
+            const inputB = createMathAnswerField("b) javob");
 
             const saveParts = function () {
                 window.answerKey[i] = [inputA.value.trim(), inputB.value.trim()];
             };
             inputA.addEventListener("input", saveParts);
             inputB.addEventListener("input", saveParts);
-
-            if (window.FormulaEditor) {
-                FormulaEditor.attach(inputA, draft.subject);
-                FormulaEditor.attach(inputB, draft.subject);
-            }
 
             partA.appendChild(labelA);
             partA.appendChild(inputA);
@@ -1873,16 +2094,11 @@ function openAnswerKey() {
             wrap.appendChild(partB);
             row.appendChild(wrap);
         } else {
-            const input = document.createElement("input");
-            input.className = "exact-answer";
-            input.placeholder = "Aniq javob";
+            const input = createMathAnswerField("Aniq javob");
             input.dataset.question = i;
             input.addEventListener("input", function () {
                 window.answerKey[i] = input.value.trim();
             });
-            if (window.FormulaEditor) {
-                FormulaEditor.attach(input, draft.subject);
-            }
             row.appendChild(input);
         }
 
@@ -1992,11 +2208,28 @@ async function saveAnswerKey() {
 ===================================== */
 
 function goHome() {
-    document.getElementById("homeButton").classList.add("active");
-    document.getElementById("profileButton").classList.remove("active");
+
+    document.getElementById(
+        "homeButton"
+    ).classList.add("active");
+
+
+    document.getElementById(
+        "profileButton"
+    ).classList.remove("active");
+
+
     closeProfile();
+
     closeProModal();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+
+    window.scrollTo(
+        {
+            top: 0,
+            behavior: "smooth"
+        }
+    );
 }
 
 
@@ -2005,13 +2238,24 @@ function goHome() {
 ===================================== */
 
 function showMessage(text) {
-    document.getElementById("messageText").textContent = text;
-    document.getElementById("messageModal").classList.add("show");
+
+    document.getElementById(
+        "messageText"
+    ).textContent =
+        text;
+
+
+    document.getElementById(
+        "messageModal"
+    ).classList.add("show");
 }
 
 
 function closeMessage() {
-    document.getElementById("messageModal").classList.remove("show");
+
+    document.getElementById(
+        "messageModal"
+    ).classList.remove("show");
 }
 
 
@@ -2019,29 +2263,64 @@ function closeMessage() {
    MODAL TASHQARISIGA BOSILSA YOPISH
 ===================================== */
 
-document.getElementById("answerKeyModal").addEventListener("click", function(event) {
-    if (event.target === this) {
-        closeAnswerKey();
-    }
-});
+document
+    .getElementById("answerKeyModal")
+    .addEventListener(
+        "click",
+        function(event) {
+            if (event.target === this) {
+                closeAnswerKey();
+            }
+        }
+    );
 
-document.getElementById("profileModal").addEventListener("click", function(event) {
-    if (event.target === this) {
-        closeProfile();
-    }
-});
 
-document.getElementById("proModal").addEventListener("click", function(event) {
-    if (event.target === this) {
-        closeProModal();
-    }
-});
+document
+    .getElementById("profileModal")
+    .addEventListener(
+        "click",
+        function(event) {
 
-document.getElementById("messageModal").addEventListener("click", function(event) {
-    if (event.target === this) {
-        closeMessage();
-    }
-});
+            if (
+                event.target === this
+            ) {
+
+                closeProfile();
+            }
+        }
+    );
+
+
+document
+    .getElementById("proModal")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === this
+            ) {
+
+                closeProModal();
+            }
+        }
+    );
+
+
+document
+    .getElementById("messageModal")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target === this
+            ) {
+
+                closeMessage();
+            }
+        }
+    );
 
 </script>
 
