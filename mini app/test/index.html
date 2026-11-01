@@ -475,19 +475,22 @@ function renderTest(){
         : [];
 
     if (!questions.length && questionCount > 0) {
+        // Backend test yaratilganda saqlangan formatni qaytaradi.
+        // Eski testlar uchun dtm_45 standart formati saqlanadi.
+        const answerFormat = currentTest.answer_format || "dtm_45";
         questions = Array.from({length: questionCount}, (_, i) => {
             const number = i + 1;
-
             let type = "multiple_choice_4";
 
-            if (number >= 33 && number <= 35) {
-                type = "multiple_choice_6";
-            } else if (number >= 36 && number <= 45) {
-                type = "double_exact";
-            } else if (number > 45) {
-                type = "exact";
+            if (answerFormat === "dtm_45") {
+                if (number >= 33 && number <= 35) {
+                    type = "multiple_choice_6";
+                } else if (number >= 36 && number <= 45) {
+                    type = "double_exact";
+                } else if (number > 45) {
+                    type = "exact";
+                }
             }
-
             return { number, type };
         });
     }
