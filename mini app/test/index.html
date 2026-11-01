@@ -132,9 +132,36 @@ button{border:0;cursor:pointer}
     .dual-answer .exact-answer { height:52px !important; min-height:52px !important; }
 }
 
+
+.math-answer-field {
+    display:block; min-width:0; width:100%; min-height:46px;
+    padding:8px 10px; border:1px solid #d9dee7; border-radius:12px;
+    background:#fff; color:#172033; font-size:20px;
+    box-sizing:border-box; --caret-color:#2481cc;
+}
+.math-answer-field:focus-within { border-color:#2481cc; outline:none; }
+
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 <script defer src="formula-editor.js"></script>
+<script>
+// Aniq javoblar uchun MathLive maydoni: qiymat LaTeX ko‘rinishida saqlanadi.
+function createMathAnswerField(placeholder, initialValue = "") {
+    const field = document.createElement("math-field");
+    field.className = "exact-answer math-answer-field";
+    field.setAttribute("virtual-keyboard-mode", "onfocus");
+    field.setAttribute("smart-fence", "true");
+    field.setAttribute("smart-superscript", "true");
+    field.setAttribute("default-mode", "math");
+    field.setAttribute("aria-label", placeholder || "Formula javobi");
+    field.setAttribute("placeholder", placeholder || "Javob");
+    field.value = initialValue || "";
+    field.addEventListener("input", () => {
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    return field;
+}
+</script>
 <style>.dual-answer-part .fm-open{flex:0 0 40px;margin-left:0}.dual-answer-part{grid-template-columns:32px minmax(0,1fr) 40px!important}</style>
 </head>
 
@@ -514,28 +541,18 @@ function renderTest(){
             const labelA = document.createElement("div");
             labelA.textContent = "a)";
             labelA.className = "dual-answer-label";
-            const inputA = document.createElement("input");
-            inputA.className = "exact-answer";
-            inputA.placeholder = "a) javob";
-            inputA.value = pair[0] || "";
+            const inputA = createMathAnswerField("a) javob", pair[0] || "");
 
             const labelB = document.createElement("div");
             labelB.textContent = "b)";
             labelB.className = "dual-answer-label";
-            const inputB = document.createElement("input");
-            inputB.className = "exact-answer";
-            inputB.placeholder = "b) javob";
-            inputB.value = pair[1] || "";
+            const inputB = createMathAnswerField("b) javob", pair[1] || "");
 
             const savePair = ()=>{
                 answers[String(number)] = [inputA.value, inputB.value];
             };
             inputA.addEventListener("input", savePair);
             inputB.addEventListener("input", savePair);
-            if (window.FormulaEditor) {
-                FormulaEditor.attach(inputA, currentTest.subject);
-                FormulaEditor.attach(inputB, currentTest.subject);
-            }
 
             const partA = document.createElement("div");
             partA.className = "dual-answer-part";
@@ -551,14 +568,10 @@ function renderTest(){
             wrap.appendChild(partB);
             wrapper.appendChild(wrap);
         }else if(q.type === "exact"){
-            const input = document.createElement("input");
-            input.className = "exact-answer";
-            input.placeholder = "Aniq javob";
-            input.value = answers[String(number)] || "";
+            const input = createMathAnswerField("Aniq javob", answers[String(number)] || "");
             input.addEventListener("input",()=>{
                 answers[String(number)] = input.value;
             });
-            if (window.FormulaEditor) FormulaEditor.attach(input, currentTest.subject);
             wrapper.appendChild(input);
         }else{
             const row = document.createElement("div");
