@@ -1124,7 +1124,9 @@
         mathEditor.mathVirtualKeyboardPolicy = "manual";
         mathEditor.setAttribute("inputmode", "none");
 
-        mathEditor.value = target.value || "";
+        // Agar oldindan vizual elementda qiymat bo'lsa shuni o'qiymiz, yo'qsa inputdan
+        let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
+        mathEditor.value = visualField ? visualField.value : (target.value || "");
 
         if (!mathEditor.dataset.keyboardConfigured) {
           mathEditor.addEventListener("focus", () => {
@@ -1175,7 +1177,7 @@
   }
 
   // =========================================
-  // 15. SAQLASH (YANGILANGAN QISM)
+  // 15. SAQLASH (FAQAT VIZUAL KO'RINISH QOLADIGAN QILIB YANGILANDI)
   // =========================================
 
   function save() {
@@ -1185,21 +1187,45 @@
     }
 
     if (IS_MATH()) {
-      const val = mathEditor.value;
+      const val = mathEditor.value; // Masalan: \sqrt[2]{3}
       
-      // Asl inputga LaTeX qiymatini saqlaymiz (bazaga ketishi uchun)
+      // 1. Asl inputga qiymatni yozib qo'yamiz (bazaga ketishi uchun)
       activeTarget.value = val;
 
-      // Input yonida avtomatik ravishda vizual fakkini hosil qilamiz
-      let visualContainer = activeTarget.parentNode.querySelector(".fm-visual-preview");
-      if (!visualContainer) {
-        visualContainer = document.createElement("div");
-        visualContainer.className = "fm-visual-preview";
-        visualContainer.style.cssText = "font-size: 20px; color: #0756b8; margin-top: 4px; font-family: serif;";
-        activeTarget.insertAdjacentElement("afterend", visualContainer);
+      // 2. Asl inputning o'rnida faqat chiroyli matematik ko'rinishni chiqaramiz
+      let visualField = activeTarget.parentNode.querySelector(".fm-replaced-math-view");
+      if (!visualField) {
+        visualField = document.createElement("math-field");
+        visualField.className = "fm-replaced-math-view";
+        visualField.setAttribute("read-only", "");
+        visualField.style.cssText = `
+          display: inline-flex;
+          align-items: center;
+          width: 100%;
+          min-height: 44px;
+          background: #fff;
+          color: #111827;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          padding: 6px 12px;
+          font-size: 20px;
+          cursor: pointer;
+          box-sizing: border-box;
+          margin-bottom: 8px;
+        `;
+
+        // Vizual element bosilganda tahrirlash oynasi qayta ochiladi
+        visualField.addEventListener("click", () => {
+          open(activeTarget, activeSubject);
+        });
+
+        // Asl inputni yashirib, o'rniga vizual elementni qo'shamiz
+        activeTarget.style.display = "none";
+        activeTarget.insertAdjacentElement("afterend", visualField);
       }
 
-      visualContainer.innerHTML = `<math-field read-only style="border:none; background:transparent; pointer-events:none;">${val}</math-field>`;
+      visualField.value = val;
+      visualField.style.display = "block";
 
     } else {
       activeTarget.value = unicodeEditor.value;
@@ -1259,7 +1285,6 @@
         event.stopPropagation();
       }
 
-      target.blur();
       open(target, selectedSubject);
     }
 
