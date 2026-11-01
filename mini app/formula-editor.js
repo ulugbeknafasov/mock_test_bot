@@ -1,4 +1,3 @@
-
 (function () {
   "use strict";
 
@@ -1176,7 +1175,7 @@
   }
 
   // =========================================
-  // 15. SAQLASH
+  // 15. SAQLASH (YANGILANGAN QISM)
   // =========================================
 
   function save() {
@@ -1186,7 +1185,22 @@
     }
 
     if (IS_MATH()) {
-      activeTarget.value = mathEditor.value;
+      const val = mathEditor.value;
+      
+      // Asl inputga LaTeX qiymatini saqlaymiz (bazaga ketishi uchun)
+      activeTarget.value = val;
+
+      // Input yonida avtomatik ravishda vizual fakkini hosil qilamiz
+      let visualContainer = activeTarget.parentNode.querySelector(".fm-visual-preview");
+      if (!visualContainer) {
+        visualContainer = document.createElement("div");
+        visualContainer.className = "fm-visual-preview";
+        visualContainer.style.cssText = "font-size: 20px; color: #0756b8; margin-top: 4px; font-family: serif;";
+        activeTarget.insertAdjacentElement("afterend", visualContainer);
+      }
+
+      visualContainer.innerHTML = `<math-field read-only style="border:none; background:transparent; pointer-events:none;">${val}</math-field>`;
+
     } else {
       activeTarget.value = unicodeEditor.value;
     }
