@@ -743,6 +743,60 @@
   // 10. OYNA
   // =========================================
 
+  // Oyna ochilgan/yopilgan zahoti kelgan "ikkinchi bosish"ni (barmoq ostidagi
+  // tugmaga tushib ketadigan hayoliy click) o'tkazib yuborish uchun.
+  let tapGuardUntil = 0;
+
+  function armTapGuard(ms) {
+    tapGuardUntil = Date.now() + (ms || 450);
+  }
+
+  function tapGuardActive() {
+    return Date.now() < tapGuardUntil;
+  }
+
+  // Klaviatura ochilgandan keyingi qisqa vaqtda formulaga o'zgarish tushsa,
+  // u bekor qilinadi va ochilgan paytdagi qiymat qaytariladi.
+  let restoreValue = null;
+  let restoreUntil = 0;
+
+  function isKeyboardEvent(ev) {
+    const path = typeof ev.composedPath === "function" ? ev.composedPath() : [];
+
+    return path.some(function (node) {
+      if (!node || node.nodeType !== 1) return false;
+
+      const tag = String(node.tagName || "").toUpperCase();
+      const cls = typeof node.className === "string" ? node.className : "";
+
+      return (
+        tag.indexOf("KEYBOARD") !== -1 ||
+        cls.indexOf("ML__keyboard") !== -1 ||
+        cls.indexOf("MLK__") !== -1
+      );
+    });
+  }
+
+  let keyboardGuardInstalled = false;
+
+  function installKeyboardGuard() {
+    if (keyboardGuardInstalled) return;
+    keyboardGuardInstalled = true;
+
+    [
+      "pointerdown", "pointerup", "click",
+      "touchstart", "touchend", "mousedown", "mouseup"
+    ].forEach(function (type) {
+      document.addEventListener(type, function (ev) {
+        if (tapGuardActive() && isKeyboardEvent(ev)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.stopImmediatePropagation();
+        }
+      }, true);
+    });
+  }
+
   function ensureModal() {
     if (modal) return;
 
@@ -804,6 +858,19 @@
       </section>
     `;
 
+    ["pointerdown", "pointerup", "click", "touchstart", "touchend", "mousedown", "mouseup"]
+      .forEach(function (type) {
+        modal.addEventListener(type, function (ev) {
+          if (tapGuardActive()) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+          }
+        }, true);
+      });
+
+    installKeyboardGuard();
+
     document.body.appendChild(modal);
 
     unicodeEditor = modal.querySelector("#fm-field");
@@ -861,15 +928,16 @@
       if (IS_MATH() && !mathEditor.hidden) {
         mathEditor.executeCommand("deleteBackward");
       } else {
-        const start = unicodeEditor.selectionStart;
-        const end = unicodeEditor.selectionEnd;
+        const text = unicodeEditor.value;
+        const start = snapBoundary(text, unicodeEditor.selectionStart, "down");
+        const end = snapBoundary(text, unicodeEditor.selectionEnd, "up");
 
         if (start !== end) {
           unicodeEditor.setRangeText("", start, end, "end");
         } else if (start > 0) {
           unicodeEditor.setRangeText(
             "",
-            start - 1,
+            prevBoundary(text, start),
             start,
             "end"
           );
@@ -905,6 +973,62 @@
   }
 
   // =========================================
+  // GRAFEMA (BELGI) CHEGARALARI
+  // Kursor va o'chirish "ko'rinadigan belgi" bo'yicha ishlaydi, shunda
+  // birlashtiruvchi belgilar (masalan, x + vektor strelkasi) yoki
+  // surrogat juftliklari o'rtasidan bo'linib ketmaydi.
+  // =========================================
+
+  const GRAPHEME_SEGMENTER =
+    window.Intl && Intl.Segmenter
+      ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+      : null;
+
+  function graphemeBoundaries(text) {
+    const bounds = [0];
+
+    if (GRAPHEME_SEGMENTER) {
+      for (const part of GRAPHEME_SEGMENTER.segment(text)) {
+        bounds.push(part.index + part.segment.length);
+      }
+    } else {
+      const re = /[\s\S][\u0300-\u036f\u20d0-\u20ff\ufe00-\ufe0f\u200d]*/gu;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        bounds.push(m.index + m[0].length);
+      }
+    }
+
+    return bounds;
+  }
+
+  function prevBoundary(text, pos) {
+    const bounds = graphemeBoundaries(text);
+    let result = 0;
+    for (const b of bounds) {
+      if (b < pos) result = b;
+      else break;
+    }
+    return result;
+  }
+
+  function nextBoundary(text, pos) {
+    const bounds = graphemeBoundaries(text);
+    for (const b of bounds) {
+      if (b > pos) return b;
+    }
+    return text.length;
+  }
+
+  function snapBoundary(text, pos, direction) {
+    const bounds = graphemeBoundaries(text);
+    if (bounds.indexOf(pos) !== -1) return pos;
+    return direction === "up"
+      ? nextBoundary(text, pos)
+      : prevBoundary(text, pos);
+  }
+
+  // =========================================
   // 11. UNICODE KURSORINI SURISH
   // =========================================
 
@@ -919,7 +1043,7 @@
       if (start !== end) {
         end = start;
       } else {
-        start = Math.max(0, start - 1);
+        start = prevBoundary(text, start);
         end = start;
       }
     }
@@ -928,7 +1052,7 @@
       if (start !== end) {
         start = end;
       } else {
-        start = Math.min(text.length, end + 1);
+        start = nextBoundary(text, end);
       }
 
       end = start;
@@ -965,6 +1089,7 @@
         );
       }
 
+      start = snapBoundary(text, start, "down");
       end = start;
     }
 
@@ -991,8 +1116,9 @@
       return;
     }
 
-    const start = unicodeEditor.selectionStart;
-    const end = unicodeEditor.selectionEnd;
+    const currentText = unicodeEditor.value;
+    const start = snapBoundary(currentText, unicodeEditor.selectionStart, "down");
+    const end = snapBoundary(currentText, unicodeEditor.selectionEnd, "up");
 
     unicodeEditor.setRangeText(
       value,
@@ -1083,6 +1209,8 @@
 async function open(target, subject) {
   if (!target) return;
 
+  armTapGuard(450);
+
   activeTarget = target;
   const currentTarget = target;
 
@@ -1151,6 +1279,26 @@ async function open(target, subject) {
           }
         });
 
+        mathEditor.addEventListener("beforeinput", function (ev) {
+          if (Date.now() < restoreUntil && ev.cancelable) {
+            ev.preventDefault();
+          }
+        }, true);
+
+        mathEditor.addEventListener("input", function () {
+          if (
+            Date.now() < restoreUntil &&
+            restoreValue !== null &&
+            mathEditor.value !== restoreValue
+          ) {
+            mathEditor.value = restoreValue;
+
+            try {
+              mathEditor.executeCommand("moveToMathfieldEnd");
+            } catch (e) {}
+          }
+        });
+
         mathEditor.dataset.keyboardConfigured = "1";
       }
 
@@ -1165,6 +1313,10 @@ async function open(target, subject) {
             mathEditor.setAttribute("inputmode", "none");
             mathEditor.setAttribute("virtual-keyboard-mode", "manual");
             mathEditor.mathVirtualKeyboardPolicy = "manual";
+            armTapGuard(800);
+            restoreValue = mathEditor.value;
+            restoreUntil = Date.now() + 900;
+
             mathEditor.focus({ preventScroll: true });
 
             if (window.mathVirtualKeyboard) {
@@ -1201,6 +1353,9 @@ async function open(target, subject) {
 
     renderBank();
     unicodeEditor.focus();
+
+    const endPos = unicodeEditor.value.length;
+    unicodeEditor.setSelectionRange(endPos, endPos);
   }
 }
 
@@ -1256,6 +1411,8 @@ function save() {
         event.preventDefault();
         event.stopPropagation();
 
+        if (tapGuardActive()) return;
+
         open(savedTarget, savedSubject);
       });
 
@@ -1296,6 +1453,8 @@ function save() {
   // =========================================
 
   function close() {
+    armTapGuard(450);
+
     if (modal) {
       modal.hidden = true;
     }
@@ -1324,27 +1483,40 @@ function save() {
     const selectedSubject =
       String(subject || "matematika").toLowerCase();
 
+    // Telefonning oddiy klaviaturasi chiqmasin
+    target.setAttribute("inputmode", "none");
+
     function openForTarget(event) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
 
+      if (document.activeElement === target) target.blur();
+
       open(target, selectedSubject);
     }
 
-    target.addEventListener("pointerdown", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      openForTarget(event);
-    });
-    target.addEventListener("click", function (event) {
-      if (event.detail === 0) openForTarget(event);
-      else {
+    // Faqat haqiqiy "click" ochadi: brauzer surish (scroll) paytida click
+    // yubormaydi. Oyna yopilgan zahoti kelgan click o'tkazib yuboriladi.
+    function bindTap(element) {
+      element.addEventListener("pointerdown", function (event) {
+        // Sichqonchada fokus olinmasligi uchun; sensorli ekranda
+        // preventDefault chaqirilmaydi, shunda surish ishlayveradi.
+        if (event.pointerType === "mouse") event.preventDefault();
+      });
+
+      element.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
-      }
-    });
+
+        if (tapGuardActive()) return;
+
+        openForTarget(event);
+      });
+    }
+
+    bindTap(target);
 
     const button = document.createElement("button");
 
@@ -1353,18 +1525,7 @@ function save() {
     button.textContent = "∑";
     button.title = "Maxsus klaviaturani ochish";
 
-    button.addEventListener("pointerdown", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      openForTarget(event);
-    });
-    button.addEventListener("click", function (event) {
-      if (event.detail === 0) openForTarget(event);
-      else {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    });
+    bindTap(button);
 
     target.insertAdjacentElement(
       "afterend",
