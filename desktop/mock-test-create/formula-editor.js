@@ -743,6 +743,60 @@
   // 10. OYNA
   // =========================================
 
+  // Oyna ochilgan/yopilgan zahoti kelgan "ikkinchi bosish"ni (barmoq ostidagi
+  // tugmaga tushib ketadigan hayoliy click) o'tkazib yuborish uchun.
+  let tapGuardUntil = 0;
+
+  function armTapGuard(ms) {
+    tapGuardUntil = Date.now() + (ms || 450);
+  }
+
+  function tapGuardActive() {
+    return Date.now() < tapGuardUntil;
+  }
+
+  // Klaviatura ochilgandan keyingi qisqa vaqtda formulaga o'zgarish tushsa,
+  // u bekor qilinadi va ochilgan paytdagi qiymat qaytariladi.
+  let restoreValue = null;
+  let restoreUntil = 0;
+
+  function isKeyboardEvent(ev) {
+    const path = typeof ev.composedPath === "function" ? ev.composedPath() : [];
+
+    return path.some(function (node) {
+      if (!node || node.nodeType !== 1) return false;
+
+      const tag = String(node.tagName || "").toUpperCase();
+      const cls = typeof node.className === "string" ? node.className : "";
+
+      return (
+        tag.indexOf("KEYBOARD") !== -1 ||
+        cls.indexOf("ML__keyboard") !== -1 ||
+        cls.indexOf("MLK__") !== -1
+      );
+    });
+  }
+
+  let keyboardGuardInstalled = false;
+
+  function installKeyboardGuard() {
+    if (keyboardGuardInstalled) return;
+    keyboardGuardInstalled = true;
+
+    [
+      "pointerdown", "pointerup", "click",
+      "touchstart", "touchend", "mousedown", "mouseup"
+    ].forEach(function (type) {
+      document.addEventListener(type, function (ev) {
+        if (tapGuardActive() && isKeyboardEvent(ev)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ev.stopImmediatePropagation();
+        }
+      }, true);
+    });
+  }
+
   function ensureModal() {
     if (modal) return;
 
@@ -803,6 +857,19 @@
 
       </section>
     `;
+
+    ["pointerdown", "pointerup", "click", "touchstart", "touchend", "mousedown", "mouseup"]
+      .forEach(function (type) {
+        modal.addEventListener(type, function (ev) {
+          if (tapGuardActive()) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.stopImmediatePropagation();
+          }
+        }, true);
+      });
+
+    installKeyboardGuard();
 
     document.body.appendChild(modal);
 
@@ -1142,6 +1209,8 @@
 async function open(target, subject) {
   if (!target) return;
 
+  armTapGuard(450);
+
   activeTarget = target;
   const currentTarget = target;
 
@@ -1210,6 +1279,26 @@ async function open(target, subject) {
           }
         });
 
+        mathEditor.addEventListener("beforeinput", function (ev) {
+          if (Date.now() < restoreUntil && ev.cancelable) {
+            ev.preventDefault();
+          }
+        }, true);
+
+        mathEditor.addEventListener("input", function () {
+          if (
+            Date.now() < restoreUntil &&
+            restoreValue !== null &&
+            mathEditor.value !== restoreValue
+          ) {
+            mathEditor.value = restoreValue;
+
+            try {
+              mathEditor.executeCommand("moveToMathfieldEnd");
+            } catch (e) {}
+          }
+        });
+
         mathEditor.dataset.keyboardConfigured = "1";
       }
 
@@ -1224,7 +1313,11 @@ async function open(target, subject) {
           mathEditor.setAttribute("inputmode", "none");
           mathEditor.mathVirtualKeyboardPolicy = "manual";
 
-          mathEditor.focus({ preventScroll: true });
+          armTapGuard(800);
+            restoreValue = mathEditor.value;
+            restoreUntil = Date.now() + 900;
+
+            mathEditor.focus({ preventScroll: true });
 
           if (window.mathVirtualKeyboard) {
             window.mathVirtualKeyboard.layouts = [
@@ -1321,6 +1414,8 @@ function save() {
         event.preventDefault();
         event.stopPropagation();
 
+        if (tapGuardActive()) return;
+
         open(savedTarget, savedSubject);
       });
 
@@ -1361,6 +1456,8 @@ function save() {
   // =========================================
 
   function close() {
+    armTapGuard(450);
+
     if (modal) {
       modal.hidden = true;
     }
@@ -1403,59 +1500,22 @@ function save() {
       open(target, selectedSubject);
     }
 
-    // Faqat "bosish" (tap) ochadi. Barmoq surilsa (scroll) yoki
-    // hodisa bekor qilinsa (pointercancel), hech narsa ochilmaydi.
+    // Faqat haqiqiy "click" ochadi: brauzer surish (scroll) paytida click
+    // yubormaydi. Oyna yopilgan zahoti kelgan click o'tkazib yuboriladi.
     function bindTap(element) {
-      let tracking = false;
-      let moved = false;
-      let startX = 0;
-      let startY = 0;
-      let lastOpenAt = 0;
-
       element.addEventListener("pointerdown", function (event) {
-        tracking = true;
-        moved = false;
-        startX = event.clientX;
-        startY = event.clientY;
-
         // Sichqonchada fokus olinmasligi uchun; sensorli ekranda
         // preventDefault chaqirilmaydi, shunda surish ishlayveradi.
         if (event.pointerType === "mouse") event.preventDefault();
       });
 
-      element.addEventListener("pointermove", function (event) {
-        if (!tracking) return;
-        if (
-          Math.abs(event.clientX - startX) > 8 ||
-          Math.abs(event.clientY - startY) > 8
-        ) {
-          moved = true;
-        }
-      });
-
-      element.addEventListener("pointercancel", function () {
-        tracking = false;
-        moved = true;
-      });
-
-      element.addEventListener("pointerup", function (event) {
-        const isTap = tracking && !moved;
-        tracking = false;
-
-        if (isTap) {
-          lastOpenAt = Date.now();
-          openForTarget(event);
-        }
-      });
-
       element.addEventListener("click", function (event) {
-        // detail === 0: klaviatura (Enter/Space) orqali bosilgan
-        if (event.detail === 0 && Date.now() - lastOpenAt > 500) {
-          openForTarget(event);
-        } else {
-          event.preventDefault();
-          event.stopPropagation();
-        }
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (tapGuardActive()) return;
+
+        openForTarget(event);
       });
     }
 
