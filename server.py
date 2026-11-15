@@ -504,7 +504,7 @@ def create_test():
             }), 400
         question_count = 45
         answer_key = body.get("answer_key") or {}
-        allowed_subjects = {"matematika", "fizika", "kimyo", "biologiya"}
+        allowed_subjects = {"matematika", "fizika", "kimyo", "biologiya", "tarix", "ona tili"}
         if subject not in allowed_subjects:
             return jsonify({"success": False, "message": "Fanni tanlang."}), 400
         if answer_format != "dtm_45":
@@ -533,7 +533,11 @@ def create_test():
             value = answer_key.get(str(i), answer_key.get(i, ""))
             if 36 <= i <= 45:
                 pair = _normalize_multi_answer(value)
-                if len(pair) < 2 or not pair[0] or not pair[1]:
+                if _single_part_question(subject, i):
+                    # Ona tili 36–39: faqat a) javob talab qilinadi
+                    if len(pair) < 1 or not pair[0]:
+                        missing.append(str(i))
+                elif len(pair) < 2 or not pair[0] or not pair[1]:
                     missing.append(str(i))
             elif not _normalize_answer(value):
                 missing.append(str(i))
@@ -542,6 +546,10 @@ def create_test():
                 "success": False,
                 "message": "Ba'zi savollarga javob belgilanmagan."
             }), 400
+
+        # Tarix va ona tili javoblari faqat katta harfda saqlanadi
+        if subject in UPPERCASE_ONLY_SUBJECTS:
+            answer_key = _uppercase_answer_key(answer_key, subject)
 
         test_id, error_message = create_mock_test(
             telegram_id,
@@ -684,6 +692,49 @@ def _test_finished(test):
     return bool(end and end <= _utc_now())
 
 
+def _test_subject(test):
+    try:
+        return str(test["subject"] if "subject" in test.keys() else "matematika").strip().lower()
+    except Exception:
+        return "matematika"
+
+
+def _single_part_question(subject, number):
+    """Ona tili fanida 36–39-savollarda faqat a) javob bor, b) yo‘q."""
+    try:
+        return str(subject or "").strip().lower() == "ona tili" and 36 <= int(number) <= 39
+    except (TypeError, ValueError):
+        return False
+
+
+def _part_count(subject, number):
+    """Savolda nechta javob qismi borligi (36–45: odatda 2 ta, ona tili 36–39: 1 ta)."""
+    n = int(number)
+    if 36 <= n <= 45:
+        return 1 if _single_part_question(subject, n) else 2
+    return 1
+
+
+UPPERCASE_ONLY_SUBJECTS = {"tarix", "ona tili"}
+
+
+def _uppercase_answer_key(answer_key, subject):
+    """Tarix va ona tili javoblarini faqat KATTA HARFDA saqlash."""
+    result = {}
+    for key, value in (answer_key or {}).items():
+        try:
+            number = int(key)
+        except (TypeError, ValueError):
+            number = 0
+        if 36 <= number <= 45:
+            parts = _normalize_multi_answer(value)
+            parts = (parts + ["", ""])[:_part_count(subject, number)]
+            result[str(key)] = parts
+        else:
+            result[str(key)] = _normalize_answer(value)
+    return result
+
+
 def _normalize_answer(value):
     """Normalize one answer value for comparison."""
     if value is None:
@@ -709,7 +760,7 @@ def _normalize_multi_answer(value):
     return [text]
 
 
-def _answer_parts_correct(question_number, given, right):
+def _answer_parts_correct(question_number, given, right, subject=None):
     """Return correctness flags for independently scored answer parts."""
     n = int(question_number)
     if 36 <= n <= 45:
@@ -717,10 +768,11 @@ def _answer_parts_correct(question_number, given, right):
         right_parts = _normalize_multi_answer(right)
         given_parts = (given_parts + ["", ""])[:2]
         right_parts = (right_parts + ["", ""])[:2]
-        return [
+        flags = [
             bool(given_parts[i]) and bool(right_parts[i]) and given_parts[i] == right_parts[i]
             for i in range(2)
         ]
+        return flags[:_part_count(subject, n)]
     g = _normalize_answer(given)
     r = _normalize_answer(right)
     return [bool(g) and bool(r) and g == r]
@@ -732,9 +784,9 @@ def _answer_is_correct(question_number, given, right):
     return bool(flags) and all(flags)
 
 
-def _answer_unit_count(question_count):
+def _answer_unit_count(question_count, subject=None):
     count = int(question_count or 0)
-    return count + sum(1 for n in range(36, min(45, count) + 1))
+    return count + sum(_part_count(subject, n) - 1 for n in range(36, min(45, count) + 1))
 
 
 def _grade(score):
@@ -819,6 +871,7 @@ def _calculate_scores_locked(connection, test):
     """Calculate final score. Questions 36–45 are scored as separate a/b units."""
     cursor = connection.cursor()
     answer_key = _load_answer_key(test)
+    subject = _test_subject(test)
     question_count = int(test["question_count"] or len(answer_key))
     if question_count <= 0:
         return []
@@ -831,7 +884,7 @@ def _calculate_scores_locked(connection, test):
     units = []
     for number in range(1, question_count + 1):
         if 36 <= number <= 45:
-            units.extend([(str(number), 0), (str(number), 1)])
+            units.extend([(str(number), part) for part in range(_part_count(subject, number))])
         else:
             units.append((str(number), 0))
 
@@ -851,7 +904,7 @@ def _calculate_scores_locked(connection, test):
             key = str(number)
             given = answers.get(key, answers.get(number, ""))
             right = answer_key.get(key, "")
-            flags = _answer_parts_correct(number, given, right)
+            flags = _answer_parts_correct(number, given, right, subject)
             flags_for_user[key] = flags
             for part_index, is_correct in enumerate(flags):
                 unit_key = f"{key}:{part_index}"
@@ -956,7 +1009,7 @@ def _creator_pdf_results(test, results):
         cur.execute("SELECT full_name FROM users WHERE telegram_id = ?", (item["telegram_id"],))
         row = cur.fetchone(); connection.close()
         name = (row["full_name"] if row else "") or "Ism familiya kiritilmagan"
-        max_units = int(item.get("answer_unit_count", _answer_unit_count(test["question_count"])))
+        max_units = int(item.get("answer_unit_count", _answer_unit_count(test["question_count"], _test_subject(test))))
         data.append([str(i), name, f"{item['correct_count']}/{max_units}", f"{item['score']:.2f}", f"{item['percent']:.2f}%", item['grade']])
 
     table = Table(data, repeatRows=1, colWidths=[9*mm, 65*mm, 34*mm, 28*mm, 25*mm, 20*mm])
@@ -993,6 +1046,7 @@ def _creator_pdf_statistics(test, results):
     import matplotlib.pyplot as plt
 
     answer_key = _load_answer_key(test)
+    subject = _test_subject(test)
     question_count = int(test["question_count"])
     total = len(results)
     grade_order = ["A+", "A", "B+", "B", "C+", "C", "NC"]
@@ -1008,7 +1062,7 @@ def _creator_pdf_statistics(test, results):
         try: answers = json.loads(row["answers_json"] or "{}") if row else {}
         except Exception: answers = {}
         for i in range(1, question_count + 1):
-            flags = _answer_parts_correct(i, answers.get(str(i), ""), answer_key.get(str(i), ""))
+            flags = _answer_parts_correct(i, answers.get(str(i), ""), answer_key.get(str(i), ""), subject)
             correct_counts[i-1] += sum(1 for flag in flags if flag)
             if 36 <= i <= 45:
                 for part_index, flag in enumerate(flags[:2]):
@@ -1072,7 +1126,10 @@ def _creator_pdf_statistics(test, results):
             a_count, b_count = correct_part_counts[i-1]
             coeff_a = 2.0 - (a_count / total) if total else 2.0
             coeff_b = 2.0 - (b_count / total) if total else 2.0
-            points_data.append([str(i), f"a) {a_count}; b) {b_count}", f"a) {coeff_a:.3f}; b) {coeff_b:.3f}"])
+            if _single_part_question(subject, i):
+                points_data.append([str(i), f"a) {a_count}", f"a) {coeff_a:.3f}"])
+            else:
+                points_data.append([str(i), f"a) {a_count}; b) {b_count}", f"a) {coeff_a:.3f}; b) {coeff_b:.3f}"])
         else:
             coeff = 2.0 - (c / total) if total else 2.0
             points_data.append([str(i), str(c), f"{coeff:.4f}"])
@@ -1083,7 +1140,7 @@ def _creator_pdf_statistics(test, results):
               Image(chart, width=180*mm, height=74*mm)]
 
     def difficulty_ratio(number):
-        maximum = total * (2 if 36 <= number <= 45 else 1)
+        maximum = total * _part_count(subject, number)
         return (correct_counts[number-1] / maximum) if maximum else 0
     easiest = sorted(range(1, question_count+1), key=difficulty_ratio, reverse=True)[:5]
     hardest = sorted(range(1, question_count+1), key=difficulty_ratio)[:5]
@@ -1109,7 +1166,7 @@ def _load_final_results(test_id):
     results=[]
     for rank,row in enumerate(rows,1):
         results.append({"id":int(row["id"]),"telegram_id":int(row["telegram_id"]),"submitted_at":row["submitted_at"],
-                        "correct_count":int(row["correct_count"] or 0),"answer_unit_count":_answer_unit_count(test["question_count"]),
+                        "correct_count":int(row["correct_count"] or 0),"answer_unit_count":_answer_unit_count(test["question_count"], _test_subject(test)),
                         "percent":float(row["percent"] or 0),"score":float(row["score"] or 0),
                         "grade":row["grade"] or "NC","rank":rank})
     return test, results
@@ -1136,8 +1193,8 @@ def _deliver_finished_test(test_id):
                 f"👤 Ishtirokchi: {name}\n\n"
                 "📊 NATIJA\n\n"
                 f"✅ To‘g‘ri javoblar: {item['correct_count']} ta\n"
-                f"❌ Noto‘g‘ri javoblar: {int(item.get('answer_unit_count', _answer_unit_count(test['question_count'])))-item['correct_count']} ta\n"
-                f"📌 Hisoblangan javob qismlari: {item.get('answer_unit_count', _answer_unit_count(test['question_count']))} ta\n\n"
+                f"❌ Noto‘g‘ri javoblar: {int(item.get('answer_unit_count', _answer_unit_count(test['question_count'], _test_subject(test))))-item['correct_count']} ta\n"
+                f"📌 Hisoblangan javob qismlari: {item.get('answer_unit_count', _answer_unit_count(test['question_count'], _test_subject(test)))} ta\n\n"
                 f"📈 Natija: {item['percent']:.2f}%\n"
                 f"⭐ Ball: {item['score']:.2f}\n\n"
                 f"🏆 Daraja: {item['grade']}\n\n"
@@ -1428,7 +1485,7 @@ def participant_results():
     results=[]
     for row in rows:
         item={"test_id":row["test_id"],"test_code":row["code"],"subject":row["subject"] if "subject" in row.keys() else "matematika","submitted_at":row["submitted_at"],
-              "question_count":int(row["question_count"]),"answer_unit_count":_answer_unit_count(row["question_count"]),
+              "question_count":int(row["question_count"]),"answer_unit_count":_answer_unit_count(row["question_count"], row["subject"] if "subject" in row.keys() else None),
               "status":"finished" if row["status"]=="finished" else "waiting"}
         if row["status"]=="finished":
             c=get_connection(); cur=c.cursor()
