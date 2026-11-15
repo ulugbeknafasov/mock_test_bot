@@ -1354,7 +1354,7 @@ async def payment_proof_handler(
     if not payment:
         return
 
-    if payment["status"] != "pending":
+    if payment["status"] != "awaiting_proof":
         return
 
     proof_file_id = None
