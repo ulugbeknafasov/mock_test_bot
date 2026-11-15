@@ -748,7 +748,7 @@
   let tapGuardUntil = 0;
 
   function armTapGuard(ms) {
-    tapGuardUntil = Date.now() + (ms || 450);
+    tapGuardUntil = Date.now() + (ms || 120);
   }
 
   function tapGuardActive() {
@@ -1209,7 +1209,7 @@
 async function open(target, subject) {
   if (!target) return;
 
-  armTapGuard(450);
+  armTapGuard(120);
 
   activeTarget = target;
   const currentTarget = target;
@@ -1453,7 +1453,7 @@ function save() {
   // =========================================
 
   function close() {
-    armTapGuard(450);
+    armTapGuard(120);
 
     if (modal) {
       modal.hidden = true;
