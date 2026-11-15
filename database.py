@@ -1011,6 +1011,7 @@ def get_user_pending_payment(
             telegram_id = ?
             AND status IN (
                 'pending',
+                'awaiting_proof',
                 'proof_received'
             )
         ORDER BY id DESC
@@ -1051,7 +1052,7 @@ def save_payment_proof(
             status = 'proof_received'
         WHERE
             id = ?
-            AND status = 'pending'
+            AND status = 'awaiting_proof'
         """,
         (
             proof_file_id,
@@ -1274,3 +1275,23 @@ def cancel_pro_payment(payment_id, telegram_id):
 # =========================================================
 # END
 # =========================================================
+
+
+def mark_payment_awaiting_proof(payment_id, telegram_id):
+    connection = get_connection()
+    cursor = connection.cursor()
+    cursor.execute("UPDATE pro_payments SET status='awaiting_proof' WHERE id=? AND telegram_id=? AND status='pending'", (payment_id, telegram_id))
+    changed = cursor.rowcount
+    connection.commit()
+    connection.close()
+    return changed > 0
+
+
+def reset_payment_to_pending(payment_id, telegram_id):
+    connection = get_connection()
+    cursor = connection.cursor()
+    cursor.execute("UPDATE pro_payments SET status='pending' WHERE id=? AND telegram_id=? AND status='awaiting_proof'", (payment_id, telegram_id))
+    changed = cursor.rowcount
+    connection.commit()
+    connection.close()
+    return changed > 0
