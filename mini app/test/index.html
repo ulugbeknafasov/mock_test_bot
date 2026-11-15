@@ -437,7 +437,14 @@ function renderTest(){
             inputB.placeholder = "b) javob";
             inputB.value = pair[1] || "";
 
-            const savePair = ()=>{ answers[String(number)] = [inputA.value, inputB.value]; };
+            // Ona tili: 36–39-savollarda faqat a) javob bor, b) yo'q
+            const singlePart = currentTest.subject === "ona tili" && number >= 36 && number <= 39;
+            const upperIf = (v)=> (currentTest.subject === "tarix" || currentTest.subject === "ona tili") ? String(v || "").toUpperCase() : v;
+            const savePair = ()=>{
+                answers[String(number)] = singlePart
+                    ? [upperIf(inputA.value)]
+                    : [upperIf(inputA.value), upperIf(inputB.value)];
+            };
             inputA.addEventListener("input", savePair);
             inputB.addEventListener("input", savePair);
             if (window.FormulaEditor) {
@@ -456,7 +463,7 @@ function renderTest(){
             partB.appendChild(inputB);
 
             wrap.appendChild(partA);
-            wrap.appendChild(partB);
+            if (!singlePart) wrap.appendChild(partB);
             wrapper.appendChild(wrap);
         }else if(q.type === "exact"){
             const input = document.createElement("input");
