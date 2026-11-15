@@ -1157,27 +1157,24 @@ async function open(target, subject) {
       renderBank();
 
       // Fokusni modal to'liq ochilgandan keyin berish
+      // Ochish tugmasining touch/click hodisasi yangi klaviaturaga
+      // o'tib ketmasligi uchun fokusni biroz kechiktiramiz.
       requestAnimationFrame(() => {
-        if (
-          !modal.hidden &&
-          activeTarget === currentTarget
-        ) {
-          mathEditor.setAttribute("inputmode", "none");
-          mathEditor.mathVirtualKeyboardPolicy = "manual";
+        setTimeout(() => {
+          if (!modal.hidden && activeTarget === currentTarget) {
+            mathEditor.setAttribute("inputmode", "none");
+            mathEditor.setAttribute("virtual-keyboard-mode", "manual");
+            mathEditor.mathVirtualKeyboardPolicy = "manual";
+            mathEditor.focus({ preventScroll: true });
 
-          mathEditor.focus({ preventScroll: true });
-
-          if (window.mathVirtualKeyboard) {
-            window.mathVirtualKeyboard.layouts = [
-              "numeric",
-              "alphabetic",
-              "symbols",
-              "greek"
-            ];
-
-            window.mathVirtualKeyboard.show();
+            if (window.mathVirtualKeyboard) {
+              window.mathVirtualKeyboard.layouts = [
+                "numeric", "alphabetic", "symbols", "greek"
+              ];
+              window.mathVirtualKeyboard.show();
+            }
           }
-        }
+        }, 180);
       });
 
     } catch (error) {
@@ -1336,7 +1333,18 @@ function save() {
       open(target, selectedSubject);
     }
 
-    target.addEventListener("click", openForTarget);
+    target.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      openForTarget(event);
+    });
+    target.addEventListener("click", function (event) {
+      if (event.detail === 0) openForTarget(event);
+      else {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
 
     const button = document.createElement("button");
 
@@ -1345,7 +1353,18 @@ function save() {
     button.textContent = "∑";
     button.title = "Maxsus klaviaturani ochish";
 
-    button.addEventListener("click", openForTarget);
+    button.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      openForTarget(event);
+    });
+    button.addEventListener("click", function (event) {
+      if (event.detail === 0) openForTarget(event);
+      else {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
 
     target.insertAdjacentElement(
       "afterend",
