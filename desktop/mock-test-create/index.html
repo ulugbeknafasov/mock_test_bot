@@ -1873,8 +1873,28 @@ async function buyPro(planId, durationDays, amount) {
     }
 }
 
-function closePaymentModal() {
+function hidePaymentModal() {
     document.getElementById("paymentModal").classList.remove("show");
+}
+
+async function closePaymentModal() {
+    const paymentId = window.currentPaymentId;
+    hidePaymentModal();
+    window.currentPaymentId = null;
+
+    if (!paymentId) return;
+    try {
+        await fetch(API_BASE + "/api/pro-cancel", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Telegram-Init-Data": tg.initData
+            },
+            body: JSON.stringify({ payment_id: paymentId })
+        });
+    } catch (error) {
+        console.error("Payment cancel error:", error);
+    }
 }
 
 async function paidProPayment() {
@@ -1898,7 +1918,8 @@ async function paidProPayment() {
             button.textContent = "✅ To‘lov qildim";
             return;
         }
-        closePaymentModal();
+        hidePaymentModal();
+        window.currentPaymentId = null;
         tg.close();
     } catch (error) {
         console.error("Payment paid error:", error);
