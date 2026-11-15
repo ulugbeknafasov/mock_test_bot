@@ -1313,9 +1313,9 @@ async function open(target, subject) {
           mathEditor.setAttribute("inputmode", "none");
           mathEditor.mathVirtualKeyboardPolicy = "manual";
 
-          armTapGuard(800);
+          armTapGuard(150);
             restoreValue = mathEditor.value;
-            restoreUntil = Date.now() + 900;
+            restoreUntil = Date.now() + 250;
 
             mathEditor.focus({ preventScroll: true });
 
