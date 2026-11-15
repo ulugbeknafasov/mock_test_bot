@@ -29,6 +29,8 @@ from database import (
     create_pro_payment,
     get_payment_card,
     cancel_pro_payment,
+    mark_payment_awaiting_proof,
+    reset_payment_to_pending,
     get_payment,
     get_connection,
     get_full_name,
@@ -376,11 +378,14 @@ def pro_purchase():
             return jsonify({"success": False, "message": "Bu tarif uchun narx belgilanmagan."}), 400
         old_payment = get_user_pending_payment(telegram_id)
         if old_payment:
-            return jsonify({
-                "success": False, "code": "PENDING_PAYMENT",
-                "message": "Sizda allaqachon kutilayotgan PRO to'lov mavjud.",
-                "payment_id": old_payment["id"]
-            }), 400
+            if old_payment["status"] == "pending":
+                cancel_pro_payment(old_payment["id"], telegram_id)
+            else:
+                return jsonify({
+                    "success": False, "code": "PENDING_PAYMENT",
+                    "message": "Sizda chek yuborish yoki tekshirish jarayonidagi PRO to'lov mavjud.",
+                    "payment_id": old_payment["id"]
+                }), 400
         payment_id = create_pro_payment(telegram_id, amount, duration_days, plan_id)
         card = get_payment_card()
         return jsonify({
@@ -422,6 +427,9 @@ def pro_payment_paid():
     if payment["status"] != "pending":
         return jsonify({"success": False, "message": "Bu to'lov uchun so'rov yuborilgan yoki yakunlangan."}), 400
 
+    if not mark_payment_awaiting_proof(payment_id, telegram_id):
+        return jsonify({"success": False, "message": "To‘lov holatini yangilab bo‘lmadi. Qayta urinib ko‘ring."}), 409
+
     text = (
         "💳 To‘lov chekini yuboring.\n\n"
         f"🆔 To‘lov ID: {payment_id}\n"
@@ -433,6 +441,7 @@ def pro_payment_paid():
         if not send_telegram_message(telegram_id, text):
             raise RuntimeError("Telegram API xabarni yubormadi")
     except Exception as error:
+        reset_payment_to_pending(payment_id, telegram_id)
         print("Telegram payment prompt error:", error)
         return jsonify({"success": False, "message": "Bot xabar yubora olmadi. Birozdan keyin qayta urinib ko‘ring."}), 502
 
@@ -1476,12 +1485,19 @@ def pro_cancel():
     if blocked:
         return blocked
 
-    payment = get_user_pending_payment(telegram_id)
-    if not payment or payment["status"] != "pending":
-        return jsonify({"success": False, "message": "Kutilayotgan PRO to'lov topilmadi yoki uni bekor qilib bo'lmaydi."}), 404
-    if not cancel_pro_payment(payment["id"], telegram_id):
+    body = request.get_json(silent=True) or {}
+    try:
+        payment_id = int(body.get("payment_id"))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "To'lov ID noto'g'ri."}), 400
+    payment = get_payment(payment_id)
+    if not payment or int(payment["telegram_id"]) != telegram_id:
+        return jsonify({"success": False, "message": "To'lov topilmadi."}), 404
+    if payment["status"] != "pending":
+        return jsonify({"success": False, "message": "Bu to'lovni bekor qilib bo'lmaydi."}), 400
+    if not cancel_pro_payment(payment_id, telegram_id):
         return jsonify({"success": False, "message": "To'lovni bekor qilib bo'lmadi."}), 400
-    return jsonify({"success": True, "message": "PRO to'lov bekor qilindi.", "payment_id": payment["id"]})
+    return jsonify({"success": True, "message": "PRO to'lov bekor qilindi.", "payment_id": payment_id})
 
 @app.route("/api/pro-pending", methods=["GET"])
 def pro_pending():
