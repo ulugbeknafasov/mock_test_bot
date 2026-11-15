@@ -861,15 +861,16 @@
       if (IS_MATH() && !mathEditor.hidden) {
         mathEditor.executeCommand("deleteBackward");
       } else {
-        const start = unicodeEditor.selectionStart;
-        const end = unicodeEditor.selectionEnd;
+        const text = unicodeEditor.value;
+        const start = snapBoundary(text, unicodeEditor.selectionStart, "down");
+        const end = snapBoundary(text, unicodeEditor.selectionEnd, "up");
 
         if (start !== end) {
           unicodeEditor.setRangeText("", start, end, "end");
         } else if (start > 0) {
           unicodeEditor.setRangeText(
             "",
-            start - 1,
+            prevBoundary(text, start),
             start,
             "end"
           );
@@ -905,6 +906,62 @@
   }
 
   // =========================================
+  // GRAFEMA (BELGI) CHEGARALARI
+  // Kursor va o'chirish "ko'rinadigan belgi" bo'yicha ishlaydi, shunda
+  // birlashtiruvchi belgilar (masalan, x + vektor strelkasi) yoki
+  // surrogat juftliklari o'rtasidan bo'linib ketmaydi.
+  // =========================================
+
+  const GRAPHEME_SEGMENTER =
+    window.Intl && Intl.Segmenter
+      ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+      : null;
+
+  function graphemeBoundaries(text) {
+    const bounds = [0];
+
+    if (GRAPHEME_SEGMENTER) {
+      for (const part of GRAPHEME_SEGMENTER.segment(text)) {
+        bounds.push(part.index + part.segment.length);
+      }
+    } else {
+      const re = /[\s\S][\u0300-\u036f\u20d0-\u20ff\ufe00-\ufe0f\u200d]*/gu;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        bounds.push(m.index + m[0].length);
+      }
+    }
+
+    return bounds;
+  }
+
+  function prevBoundary(text, pos) {
+    const bounds = graphemeBoundaries(text);
+    let result = 0;
+    for (const b of bounds) {
+      if (b < pos) result = b;
+      else break;
+    }
+    return result;
+  }
+
+  function nextBoundary(text, pos) {
+    const bounds = graphemeBoundaries(text);
+    for (const b of bounds) {
+      if (b > pos) return b;
+    }
+    return text.length;
+  }
+
+  function snapBoundary(text, pos, direction) {
+    const bounds = graphemeBoundaries(text);
+    if (bounds.indexOf(pos) !== -1) return pos;
+    return direction === "up"
+      ? nextBoundary(text, pos)
+      : prevBoundary(text, pos);
+  }
+
+  // =========================================
   // 11. UNICODE KURSORINI SURISH
   // =========================================
 
@@ -919,7 +976,7 @@
       if (start !== end) {
         end = start;
       } else {
-        start = Math.max(0, start - 1);
+        start = prevBoundary(text, start);
         end = start;
       }
     }
@@ -928,7 +985,7 @@
       if (start !== end) {
         start = end;
       } else {
-        start = Math.min(text.length, end + 1);
+        start = nextBoundary(text, end);
       }
 
       end = start;
@@ -965,6 +1022,7 @@
         );
       }
 
+      start = snapBoundary(text, start, "down");
       end = start;
     }
 
@@ -991,8 +1049,9 @@
       return;
     }
 
-    const start = unicodeEditor.selectionStart;
-    const end = unicodeEditor.selectionEnd;
+    const currentText = unicodeEditor.value;
+    const start = snapBoundary(currentText, unicodeEditor.selectionStart, "down");
+    const end = snapBoundary(currentText, unicodeEditor.selectionEnd, "up");
 
     unicodeEditor.setRangeText(
       value,
@@ -1204,6 +1263,9 @@ async function open(target, subject) {
 
     renderBank();
     unicodeEditor.focus();
+
+    const endPos = unicodeEditor.value.length;
+    unicodeEditor.setSelectionRange(endPos, endPos);
   }
 }
 
@@ -1327,27 +1389,77 @@ function save() {
     const selectedSubject =
       String(subject || "matematika").toLowerCase();
 
+    // Telefonning oddiy klaviaturasi chiqmasin
+    target.setAttribute("inputmode", "none");
+
     function openForTarget(event) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
 
+      if (document.activeElement === target) target.blur();
+
       open(target, selectedSubject);
     }
 
-    target.addEventListener("pointerdown", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      openForTarget(event);
-    });
-    target.addEventListener("click", function (event) {
-      if (event.detail === 0) openForTarget(event);
-      else {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    });
+    // Faqat "bosish" (tap) ochadi. Barmoq surilsa (scroll) yoki
+    // hodisa bekor qilinsa (pointercancel), hech narsa ochilmaydi.
+    function bindTap(element) {
+      let tracking = false;
+      let moved = false;
+      let startX = 0;
+      let startY = 0;
+      let lastOpenAt = 0;
+
+      element.addEventListener("pointerdown", function (event) {
+        tracking = true;
+        moved = false;
+        startX = event.clientX;
+        startY = event.clientY;
+
+        // Sichqonchada fokus olinmasligi uchun; sensorli ekranda
+        // preventDefault chaqirilmaydi, shunda surish ishlayveradi.
+        if (event.pointerType === "mouse") event.preventDefault();
+      });
+
+      element.addEventListener("pointermove", function (event) {
+        if (!tracking) return;
+        if (
+          Math.abs(event.clientX - startX) > 8 ||
+          Math.abs(event.clientY - startY) > 8
+        ) {
+          moved = true;
+        }
+      });
+
+      element.addEventListener("pointercancel", function () {
+        tracking = false;
+        moved = true;
+      });
+
+      element.addEventListener("pointerup", function (event) {
+        const isTap = tracking && !moved;
+        tracking = false;
+
+        if (isTap) {
+          lastOpenAt = Date.now();
+          openForTarget(event);
+        }
+      });
+
+      element.addEventListener("click", function (event) {
+        // detail === 0: klaviatura (Enter/Space) orqali bosilgan
+        if (event.detail === 0 && Date.now() - lastOpenAt > 500) {
+          openForTarget(event);
+        } else {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+    }
+
+    bindTap(target);
 
     const button = document.createElement("button");
 
@@ -1356,18 +1468,7 @@ function save() {
     button.textContent = "∑";
     button.title = "Maxsus klaviaturani ochish";
 
-    button.addEventListener("pointerdown", function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      openForTarget(event);
-    });
-    button.addEventListener("click", function (event) {
-      if (event.detail === 0) openForTarget(event);
-      else {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    });
+    bindTap(button);
 
     target.insertAdjacentElement(
       "afterend",
