@@ -13,43 +13,10 @@
   let unicodeEditor = null;
   let mathLivePromise = null;
 
-  // Tarix va ona tili: maxsus klaviatura kerak emas (telefonning o'z
-  // klaviaturasi chiqadi), javob esa har doim KATTA HARFDA saqlanadi.
-  const PLAIN_SUBJECTS = ["tarix", "ona tili"];
-
-  function enablePlainUppercase(target) {
-    target.setAttribute("autocapitalize", "characters");
-    target.setAttribute("autocomplete", "off");
-    target.setAttribute("autocorrect", "off");
-    target.setAttribute("spellcheck", "false");
-    target.style.textTransform = "uppercase";
-
-    function toUpper() {
-      const value = target.value;
-      const upper = value.toUpperCase();
-
-      if (value !== upper) {
-        const start = target.selectionStart;
-        const end = target.selectionEnd;
-        target.value = upper;
-
-        try {
-          target.setSelectionRange(start, end);
-        } catch (e) {}
-      }
-    }
-
-    target.addEventListener("input", function (ev) {
-      if (ev && ev.isComposing) return;
-      toUpper();
-    }, true);
-
-    target.addEventListener("compositionend", function () {
-      toUpper();
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-
-    toUpper();
+  // Ona tili va tarix: maxsus klaviatura kerak emas, telefonning o'z klaviaturasi chiqadi
+  function isNativeSubject(subject) {
+    const key = String(subject || "").trim().toLowerCase();
+    return key === "ona tili" || key === "tarix";
   }
 
   const IS_MATH = () =>
@@ -499,10 +466,6 @@
         margin-top:8px;
       }
 
-      .fm-fixed-tools #fm-space {
-        grid-column:1 / -1;
-      }
-
       .fm-fixed-tools button {
         min-width:0;
         min-height:37px;
@@ -512,6 +475,21 @@
         font-weight:bold;
         background:#1e3a8a;
         color:white;
+        cursor:pointer;
+        touch-action:manipulation;
+      }
+
+      .fm-space-key {
+        display:block;
+        width:100%;
+        margin-top:4px;
+        min-height:37px;
+        border:0;
+        border-radius:6px;
+        font-size:14px;
+        font-weight:bold;
+        background:#ffffff;
+        color:#0756b8;
         cursor:pointer;
         touch-action:manipulation;
       }
@@ -885,8 +863,10 @@
           <button type="button" id="fm-right">→</button>
           <button type="button" id="fm-backspace">⌫</button>
           <button type="button" id="fm-clear">C</button>
-          <button type="button" id="fm-space">␣ Bo'shliq</button>
         </div>
+
+        <!-- BO'SHLIQ TUGMASI -->
+        <button type="button" class="fm-space-key" id="fm-space">␣ Bo'shliq</button>
 
         <!-- BEKOR QILISH VA SAQLASH -->
         <div class="fm-actions">
@@ -994,7 +974,7 @@
       }
     });
 
-    // Bo'shliq (matematika, fizika, kimyo, biologiya)
+    // Bo'shliq
     const spaceButton = modal.querySelector("#fm-space");
 
     spaceButton.addEventListener("pointerdown", ev => {
@@ -1006,9 +986,12 @@
       ev.stopPropagation();
 
       if (IS_MATH() && !mathEditor.hidden) {
-        // MathLive formula rejimida oddiy bo'shliq e'tiborga olinmaydi,
-        // shuning uchun LaTeX bo'shlig'i qo'yiladi.
-        mathEditor.executeCommand(["insert", "\\ "]);
+        // Matematika/fizika: MathLive'ga bo'shliq LaTeX buyrug'i sifatida beriladi
+        mathEditor.executeCommand([
+          "insert",
+          "\\;",
+          { format: "latex", selectionMode: "placeholder" }
+        ]);
       } else {
         insertValue(" ");
       }
@@ -1584,11 +1567,17 @@ function save() {
     target.dataset.formulaButtonAttached = "1";
 
     const selectedSubject =
-      String(subject || "matematika").toLowerCase().trim();
+      String(subject || "matematika").toLowerCase();
 
-    // Tarix va ona tili: telefonning o'z klaviaturasi, javob katta harfda
-    if (PLAIN_SUBJECTS.indexOf(selectedSubject) !== -1) {
-      enablePlainUppercase(target);
+    // Ona tili va tarix: formula tugmasi ham, maxsus klaviatura ham yo'q.
+    // Telefonning o'z klaviaturasi chiqadi, javob esa katta harfda yoziladi.
+    if (isNativeSubject(selectedSubject)) {
+      target.setAttribute("inputmode", "text");
+      target.setAttribute("autocapitalize", "characters");
+      target.setAttribute("autocomplete", "off");
+      target.setAttribute("autocorrect", "off");
+      target.setAttribute("spellcheck", "false");
+      target.style.textTransform = "uppercase";
       return;
     }
 
