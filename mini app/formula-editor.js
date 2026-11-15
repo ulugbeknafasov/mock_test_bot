@@ -13,6 +13,45 @@
   let unicodeEditor = null;
   let mathLivePromise = null;
 
+  // Tarix va ona tili: maxsus klaviatura kerak emas (telefonning o'z
+  // klaviaturasi chiqadi), javob esa har doim KATTA HARFDA saqlanadi.
+  const PLAIN_SUBJECTS = ["tarix", "ona tili"];
+
+  function enablePlainUppercase(target) {
+    target.setAttribute("autocapitalize", "characters");
+    target.setAttribute("autocomplete", "off");
+    target.setAttribute("autocorrect", "off");
+    target.setAttribute("spellcheck", "false");
+    target.style.textTransform = "uppercase";
+
+    function toUpper() {
+      const value = target.value;
+      const upper = value.toUpperCase();
+
+      if (value !== upper) {
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        target.value = upper;
+
+        try {
+          target.setSelectionRange(start, end);
+        } catch (e) {}
+      }
+    }
+
+    target.addEventListener("input", function (ev) {
+      if (ev && ev.isComposing) return;
+      toUpper();
+    }, true);
+
+    target.addEventListener("compositionend", function () {
+      toUpper();
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    toUpper();
+  }
+
   const IS_MATH = () =>
     activeSubject === "matematika" ||
     activeSubject === "fizika";
@@ -252,17 +291,19 @@
 
     kimyo: {
       "1. Raqamlar": NUMBERS,
-      "2. Elementlar": ELEMENTS,
-      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
-      "4. Ionlar": CHEMISTRY_IONS,
-      "5. Reaksiya va amallar": CHEMISTRY_SYMBOLS
+      "2. Lotin harflari": LATIN_LETTERS,
+      "3. Elementlar": ELEMENTS,
+      "4. Yuqori va pastki indekslar": INDEX_TOOLS,
+      "5. Ionlar": CHEMISTRY_IONS,
+      "6. Reaksiya va amallar": CHEMISTRY_SYMBOLS
     },
 
     biologiya: {
       "1. Raqamlar": NUMBERS,
-      "2. Biologik belgilar": BIOLOGY_SYMBOLS,
-      "3. Yuqori va pastki indekslar": INDEX_TOOLS,
-      "4. Elementlar": ELEMENTS
+      "2. Lotin harflari": LATIN_LETTERS,
+      "3. Biologik belgilar": BIOLOGY_SYMBOLS,
+      "4. Yuqori va pastki indekslar": INDEX_TOOLS,
+      "5. Elementlar": ELEMENTS
     }
   };
 
@@ -456,6 +497,10 @@
         grid-template-columns:repeat(6,minmax(0,1fr));
         gap:4px;
         margin-top:8px;
+      }
+
+      .fm-fixed-tools #fm-space {
+        grid-column:1 / -1;
       }
 
       .fm-fixed-tools button {
@@ -840,6 +885,7 @@
           <button type="button" id="fm-right">→</button>
           <button type="button" id="fm-backspace">⌫</button>
           <button type="button" id="fm-clear">C</button>
+          <button type="button" id="fm-space">␣ Bo'shliq</button>
         </div>
 
         <!-- BEKOR QILISH VA SAQLASH -->
@@ -945,6 +991,26 @@
         }
 
         unicodeEditor.focus();
+      }
+    });
+
+    // Bo'shliq (matematika, fizika, kimyo, biologiya)
+    const spaceButton = modal.querySelector("#fm-space");
+
+    spaceButton.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+    });
+
+    spaceButton.addEventListener("click", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (IS_MATH() && !mathEditor.hidden) {
+        // MathLive formula rejimida oddiy bo'shliq e'tiborga olinmaydi,
+        // shuning uchun LaTeX bo'shlig'i qo'yiladi.
+        mathEditor.executeCommand(["insert", "\\ "]);
+      } else {
+        insertValue(" ");
       }
     });
 
@@ -1515,7 +1581,13 @@ function save() {
     target.dataset.formulaButtonAttached = "1";
 
     const selectedSubject =
-      String(subject || "matematika").toLowerCase();
+      String(subject || "matematika").toLowerCase().trim();
+
+    // Tarix va ona tili: telefonning o'z klaviaturasi, javob katta harfda
+    if (PLAIN_SUBJECTS.indexOf(selectedSubject) !== -1) {
+      enablePlainUppercase(target);
+      return;
+    }
 
     // Telefonning oddiy klaviaturasi chiqmasin
     target.setAttribute("inputmode", "none");
