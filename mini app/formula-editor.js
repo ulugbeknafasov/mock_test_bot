@@ -757,6 +757,7 @@
 
   // Klaviatura ochilgandan keyingi qisqa vaqtda formulaga o'zgarish tushsa,
   // u bekor qilinadi va ochilgan paytdagi qiymat qaytariladi.
+  let lastReopenAt = 0;
   let restoreValue = null;
   let restoreUntil = 0;
 
@@ -1134,8 +1135,17 @@
   // 13. KLAVIATURANI CHIZISH
   // =========================================
 
+  let renderedBankSubject = null;
+
   function renderBank() {
     const container = modal.querySelector("#fm-sections");
+
+    // Fan o'zgarmagan bo'lsa tugmalar qayta qurilmaydi (tezroq ochiladi)
+    if (IS_MATH() && renderedBankSubject === activeSubject && container.childElementCount) {
+      return;
+    }
+
+    renderedBankSubject = activeSubject;
     container.replaceChildren();
 
     const bank = BANKS[activeSubject];
@@ -1313,9 +1323,9 @@ async function open(target, subject) {
             mathEditor.setAttribute("inputmode", "none");
             mathEditor.setAttribute("virtual-keyboard-mode", "manual");
             mathEditor.mathVirtualKeyboardPolicy = "manual";
-            armTapGuard(150);
+            armTapGuard(200);
             restoreValue = mathEditor.value;
-            restoreUntil = Date.now() + 250;
+            restoreUntil = Date.now() + 200;
 
             mathEditor.focus({ preventScroll: true });
 
@@ -1326,7 +1336,7 @@ async function open(target, subject) {
               window.mathVirtualKeyboard.show();
             }
           }
-        }, 180);
+        }, 0);
       });
 
     } catch (error) {
@@ -1407,18 +1417,42 @@ function save() {
       `;
 
       // Aynan o'z inputini qayta ochish
-      visualField.addEventListener("click", function (event) {
+      // Sichqonchada (noutbuk) MathLive maydoni "click"ni yutib yuborishi
+      // mumkin, shuning uchun sichqoncha uchun pointerup ham tinglanadi
+      // (capture bosqichida, MathLive'ning ichki ishlovchilaridan oldin).
+      // Sensorli ekranda faqat click ishlaydi (surishda ochilmasligi uchun).
+      function reopenFormula(event) {
         event.preventDefault();
         event.stopPropagation();
 
         if (tapGuardActive()) return;
+        if (Date.now() - lastReopenAt < 400) return;
 
+        lastReopenAt = Date.now();
         open(savedTarget, savedSubject);
+      }
+
+      // MathLive maydonining o'zi bosishni qabul qilmaydi (pointer-events:none),
+      // hamma bosish uni o'rab turgan oddiy blokka tushadi. Shunda sichqoncha
+      // bilan maydonning istalgan joyini bossa ham darrov ochiladi.
+      visualField.style.pointerEvents = "none";
+
+      const visualWrap = document.createElement("div");
+      visualWrap.className = "fm-replaced-math-wrap";
+      visualWrap.style.cssText = "display:block;width:100%;cursor:pointer;";
+      visualWrap.appendChild(visualField);
+
+      visualWrap.addEventListener("pointerup", function (event) {
+        if (event.pointerType === "mouse" && event.button === 0) {
+          reopenFormula(event);
+        }
       });
+
+      visualWrap.addEventListener("click", reopenFormula);
 
       savedTarget.insertAdjacentElement(
         "afterend",
-        visualField
+        visualWrap
       );
     }
 
@@ -1485,6 +1519,12 @@ function save() {
 
     // Telefonning oddiy klaviaturasi chiqmasin
     target.setAttribute("inputmode", "none");
+
+    // Matematika/fizikada MathLive birinchi ochilishda kutdirmasligi uchun
+    // oldindan yuklab qo'yiladi.
+    if (selectedSubject === "matematika" || selectedSubject === "fizika") {
+      loadMathLive().catch(function () {});
+    }
 
     function openForTarget(event) {
       if (event) {
