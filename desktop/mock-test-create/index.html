@@ -1005,6 +1005,8 @@ img {
                 <option value="fizika">Fizika</option>
                 <option value="kimyo">Kimyo</option>
                 <option value="biologiya">Biologiya</option>
+                <option value="tarix">Tarix</option>
+                <option value="ona tili">Ona tili</option>
             </select>
             <small class="subject-note">Test 45 ta savol shaklida tuziladi.</small>
         </div>
@@ -2086,8 +2088,16 @@ function openAnswerKey() {
             inputB.className = "exact-answer";
             inputB.placeholder = "b) javob";
 
+            // Ona tili: 36–39-savollarda faqat a) javob bor, b) yo'q
+            const singlePart = isSinglePartQuestion(draft.subject, i);
+            if (singlePart) {
+                partB.style.display = "none";
+            }
+
             const saveParts = function () {
-                window.answerKey[i] = [inputA.value.trim(), inputB.value.trim()];
+                window.answerKey[i] = singlePart
+                    ? [fixAnswerCase(draft.subject, inputA.value)]
+                    : [fixAnswerCase(draft.subject, inputA.value), fixAnswerCase(draft.subject, inputB.value)];
             };
             inputA.addEventListener("input", saveParts);
             inputB.addEventListener("input", saveParts);
@@ -2102,7 +2112,9 @@ function openAnswerKey() {
             partB.appendChild(labelB);
             partB.appendChild(inputB);
             wrap.appendChild(partA);
-            wrap.appendChild(partB);
+            if (!singlePart) {
+                wrap.appendChild(partB);
+            }
             row.appendChild(wrap);
         } else {
             const input = document.createElement("input");
@@ -2128,6 +2140,17 @@ function closeAnswerKey() {
     document.getElementById("answerKeyModal").classList.remove("show");
 }
 
+// Tarix va ona tili javoblari faqat KATTA HARFDA saqlanadi
+function fixAnswerCase(subject, value) {
+    const text = String(value || "").trim();
+    return (subject === "tarix" || subject === "ona tili") ? text.toUpperCase() : text;
+}
+
+// Ona tili fanida 36–39-savollarda faqat a) javob bor
+function isSinglePartQuestion(subject, number) {
+    return subject === "ona tili" && number >= 36 && number <= 39;
+}
+
 async function saveAnswerKey() {
     const draft = window.currentTestDraft;
     if (!draft) return;
@@ -2136,7 +2159,8 @@ async function saveAnswerKey() {
     for (let i = 1; i <= draft.questionCount; i++) {
         if (i >= 36 && i <= 45) {
             const pair = window.answerKey[i];
-            if (!Array.isArray(pair) || !String(pair[0] || "").trim() || !String(pair[1] || "").trim()) {
+            const needB = !isSinglePartQuestion(draft.subject, i);
+            if (!Array.isArray(pair) || !String(pair[0] || "").trim() || (needB && !String(pair[1] || "").trim())) {
                 missing.push(i);
             }
         } else if (!String(window.answerKey[i] || "").trim()) {
